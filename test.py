@@ -180,9 +180,8 @@ if __name__ == '__main__':
         # emb_query, _ = add_te_func(emb_query, emb_support)
         # emb_support, _ = add_te_func(emb_support, emb_support)
 
-        emb_suppport = postprocessing_net(emb_support)
+        emb_support = postprocessing_net(emb_support)
         emb_query = postprocessing_net(emb_query)
-
 
         if opt.head == 'SVM':
             logits = cls_head(emb_query, emb_support, labels_support, opt.way, opt.shot, maxIter=3)

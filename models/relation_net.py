@@ -56,18 +56,17 @@ class RelationNetwork(nn.Module):
     def __init__(self, hidden_size, dataset='miniimagenet'):
         super(RelationNetwork, self).__init__()
         self.dataset = dataset
-        if 'imagenet' in self.dataset:
+        if 'imagenet' in self.dataset.lower():
             self.paddings = [0, 0]
             self.feature_size = 64 * 3 * 3
-        elif 'cifar' in self.dataset:
+        elif 'cifar' in self.dataset.lower() or 'FS' in self.dataset:
             self.paddings = [0, 1]
             self.feature_size = 64
-        elif self.dataset == 'omniglot':
+        elif 'omniglot' in self.dataset.lower():
             self.paddings = [1, 1]
             self.feature_size = 64
         else:
-            raise ValueError('Invalid dataset when creating Relation Network.'
-                             'Should be among [`miniimagenet`, `cifarfs`, `omniglot`]')
+            raise ValueError('Cannot recognize dataset {}'.format(self.dataset))
 
         self.layer1 = nn.Sequential(
             nn.Conv2d(64*2,64,kernel_size=3,padding=self.paddings[0]),

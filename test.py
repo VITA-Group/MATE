@@ -197,5 +197,5 @@ if __name__ == '__main__':
         ci95 = 1.96 * std / np.sqrt(i + 1)
 
         if i % 50 == 0:
-            print('Episode [{}/{}]:\t\t\tAccuracy: {:.2f} ± {:.2f} % ({:.2f} %)'\
+            log(log_file_path, 'Episode [{}/{}]:\t\t\tAccuracy: {:.2f} ± {:.2f} % ({:.2f} %)'\
                   .format(i, opt.episode, avg, ci95, acc))

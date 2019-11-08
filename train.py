@@ -15,6 +15,7 @@ from models.R2D2_embedding import R2D2Embedding
 from models.protonet_embedding import ProtoNetEmbedding
 from models.ResNet12_embedding import resnet12
 from models.task_embedding import TaskEmbedding
+from models.postprocessing import PostProcessingNet
 
 from utils import set_gpu, Timer, count_accuracy, check_dir, log
 
@@ -112,7 +113,7 @@ def get_task_embedding_func(options):
 def get_postprocessing_model(options):
     # Choose the post processing network for embeddings
     if options.post_processing:
-        raise NotImplementedError('Embedding post processing is not implemented yet')
+        return PostProcessingNet(dataset=options.dataset, task_embedding=options.task_embedding).cuda()
     else:
         return nn.Identity().cuda()
 
@@ -237,13 +238,9 @@ if __name__ == '__main__':
             # print(emb_support.size(), emb_query.size())
 
             emb_support, emb_query, G_support, G_query = add_te_func(emb_support, emb_query, data_support, data_query)
-            # emb_query, G_query = add_te_func(emb_query, emb_support)
-            # emb_support, G_support = add_te_func(emb_support, emb_support)
 
-            emb_suppport = postprocessing_net(emb_support)
+            emb_support = postprocessing_net(emb_support)
             emb_query = postprocessing_net(emb_query)
-
-            # print(emb_support.size(), emb_query.size())
 
             logit_query = cls_head(emb_query, emb_support, labels_support, opt.train_way, opt.train_shot)
 

@@ -122,8 +122,8 @@ class Relation(nn.Module):
         relation_input_support = torch.cat([expand_data_support, data_key.expand_as(expand_data_support)], dim=3)
         relation_input_query = torch.cat([expand_data_query, data_key.expand_as(expand_data_query)], dim=3)
 
-        G_support = self.relation_network(relation_input_support.reshape([-1] + relation_input_support.size()[3:]))
-        G_query = self.relation_network(relation_input_query.reshape([-1] + relation_input_query.size()[3:]))
+        G_support = self.relation_network(relation_input_support.reshape([-1] + list(relation_input_support.size()[3:])))
+        G_query = self.relation_network(relation_input_query.reshape([-1] + list(relation_input_query.size()[3:])))
 
         G_support = G_support.reshape(n_episode, n_support, n_support)
         G_query = G_query.reshape(n_episode, n_query, n_support)

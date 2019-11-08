@@ -80,13 +80,13 @@ def get_dataset(options):
 def get_task_embedding_func(options):
     # Choose the task embedding function
     if options.task_embedding == 'KME':
-        te_func = TaskEmbedding(metric='KME')
+        te_func = TaskEmbedding(metric='KME').cuda()
     elif options.task_embedding == 'Cosine':
-        te_func = TaskEmbedding(metric='Cosine')
+        te_func = TaskEmbedding(metric='Cosine').cuda()
     elif options.task_embedding == 'Relation':
-        te_func = TaskEmbedding(metric='Relation')
+        te_func = TaskEmbedding(metric='Relation', dataset=opt.dataset).cuda()
     elif options.task_embedding == 'None':
-        te_func = TaskEmbedding(metric='None')
+        te_func = TaskEmbedding(metric='None').cuda()
     else:
         raise ValueError('Cannot recognize the task embedding type `{}`'.format(options.task_embedding))
 
@@ -97,7 +97,7 @@ def get_postprocessing_model(options):
     if options.post_processing:
         raise NotImplementedError('Embedding post processing is not implemented yet')
     else:
-        return nn.Identity()
+        return nn.Identity().cuda()
 
 
 if __name__ == '__main__':

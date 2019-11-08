@@ -110,10 +110,10 @@ class Relation(nn.Module):
         n_query = data_query.size()[1]
 
         data_support = self.encoder(data_support.reshape([-1] + list(data_support.size()[2:])))
-        data_support = data_support.reshape([n_episode, n_support] + list(data_support.size()[2:]))
+        data_support = data_support.reshape([n_episode, n_support] + list(data_support.size()[1:]))
 
         data_query = self.encoder(data_query.reshape([-1] + list(data_query.size()[2:])))
-        data_query = data_query.reshape([n_episode, n_query] + list(data_query.size()[2:]))
+        data_query = data_query.reshape([n_episode, n_query] + list(data_query.size()[1:]))
 
         expand_data_support = data_support.unsqueeze(2).expand(-1, -1, n_support, data_support.size()[2:])
         expand_data_query = data_query.unsqueeze(2).expand(-1, -1, n_support, data_query.size()[2:])

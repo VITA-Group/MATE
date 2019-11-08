@@ -101,7 +101,7 @@ def get_task_embedding_func(options):
     elif options.task_embedding == 'Cosine':
         te_func = TaskEmbedding(metric='Cosine').cuda()
     elif options.task_embedding == 'Relation':
-        te_func = TaskEmbedding(metric='Relation').cuda()
+        te_func = TaskEmbedding(metric='Relation', dataset=options.dataset).cuda()
     elif options.task_embedding == 'None':
         te_func = TaskEmbedding(metric='None').cuda()
     else:

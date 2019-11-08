@@ -176,8 +176,9 @@ if __name__ == '__main__':
         emb_query = embedding_net(data_query.reshape([-1] + list(data_query.shape[-3:])))
         emb_query = emb_query.reshape(1, n_query, -1)
 
-        emb_query, _ = add_te_func(emb_query, emb_support)
-        emb_support, _ = add_te_func(emb_support, emb_support)
+        emb_support, emb_query, _, _ = add_te_func(emb_support, emb_query, data_support, data_query)
+        # emb_query, _ = add_te_func(emb_query, emb_support)
+        # emb_support, _ = add_te_func(emb_support, emb_support)
 
         emb_suppport = postprocessing_net(emb_support)
         emb_query = postprocessing_net(emb_query)

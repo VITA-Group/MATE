@@ -17,8 +17,10 @@ class PostProcessingNet(nn.Module):
 
         if 'imagenet' in self.dataset.lower():
             self.in_dim = 16000
+            self.dropout = 0.2
         elif 'cifar' in self.dataset.lower() or 'FS' in self.dataset:
             self.in_dim = 2560
+            self.dropout = 0.2
         elif 'omniglot' in self.dataset.lower():
             raise NotImplementedError('Post processing module is not implemented for Omniglot dataset yet')
         else:
@@ -28,13 +30,14 @@ class PostProcessingNet(nn.Module):
             self.in_dim *= 2
 
         if self.out_dim is None:
-            self.out_dim = self.in_dim // 4
+            self.out_dim = self.in_dim
         if self.hidden_dim is None:
             self.hidden_dim = self.out_dim
 
         self.layer1 = nn.Sequential(
             nn.Linear(self.in_dim, self.hidden_dim),
-            nn.ReLU())
+            nn.ReLU(),
+            nn.Dropout(self.dropout))
         self.layer2 = nn.Linear(self.hidden_dim, self.out_dim)
 
     def forward(self, x):

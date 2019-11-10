@@ -14,6 +14,7 @@ from models.protonet_embedding import ProtoNetEmbedding
 from models.R2D2_embedding import R2D2Embedding
 from models.ResNet12_embedding import resnet12
 from models.task_embedding import TaskEmbedding
+from models.postprocessing import PostProcessingNet
 
 from models.classification_heads import ClassificationHead
 
@@ -95,7 +96,7 @@ def get_task_embedding_func(options):
 def get_postprocessing_model(options):
     # Choose the post processing network for embeddings
     if options.post_processing:
-        raise NotImplementedError('Embedding post processing is not implemented yet')
+        return PostProcessingNet(dataset=options.dataset, task_embedding=options.task_embedding).cuda()
     else:
         return nn.Identity().cuda()
 

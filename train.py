@@ -15,7 +15,7 @@ from models.R2D2_embedding import R2D2Embedding
 from models.protonet_embedding import ProtoNetEmbedding
 from models.ResNet12_embedding import resnet12
 from models.task_embedding import TaskEmbedding
-from models.postprocessing import PostProcessingNet, PostProcessingNetConv1d
+from models.postprocessing import PostProcessingNet, PostProcessingNetConv1d, PostProcessingNetConv1d_SelfAttn
 
 from utils import set_gpu, Timer, count_accuracy, check_dir, log
 
@@ -124,6 +124,12 @@ def get_postprocessing_model(options):
         return PostProcessingNet(dataset=options.dataset, task_embedding=options.task_embedding).cuda()
     if options.post_processing == 'Conv1d':
         postprocessing_net = PostProcessingNetConv1d().cuda()
+        if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
+            device_ids = list(range(len(options.gpu.split(','))))
+            postprocessing_net = torch.nn.DataParallel(postprocessing_net, device_ids=device_ids)
+        return postprocessing_net
+    if options.post_processing == 'Conv1d_SelfAttn':
+        postprocessing_net = PostProcessingNetConv1d_SelfAttn().cuda()
         if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
             device_ids = list(range(len(options.gpu.split(','))))
             postprocessing_net = torch.nn.DataParallel(postprocessing_net, device_ids=device_ids)

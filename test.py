@@ -87,6 +87,8 @@ def get_task_embedding_func(options):
         te_func = TaskEmbedding(metric='KME').cuda()
     elif options.task_embedding == 'Cosine':
         te_func = TaskEmbedding(metric='Cosine').cuda()
+    elif options.task_embedding == 'Entropy_SVM':
+        te_func = TaskEmbedding(metric='Entropy_SVM').cuda()
     elif options.task_embedding == 'Relation':
         te_func = TaskEmbedding(metric='Relation', dataset=opt.dataset).cuda()
     elif options.task_embedding == 'None':

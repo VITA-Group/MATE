@@ -180,7 +180,10 @@ if __name__ == '__main__':
         emb_query = embedding_net(data_query.reshape([-1] + list(data_query.shape[-3:])))
         emb_query = emb_query.reshape(1, n_query, -1)
 
-        emb_support, emb_query, _, _ = add_te_func(emb_support, emb_query, data_support, data_query)
+            emb_support, emb_query, _, _ = add_te_func(
+                emb_support, emb_query, data_support, data_query,
+                labels_support, opt.way, opt.shot
+            )
         # emb_query, _ = add_te_func(emb_query, emb_support)
         # emb_support, _ = add_te_func(emb_support, emb_support)
 

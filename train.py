@@ -103,6 +103,8 @@ def get_task_embedding_func(options):
         te_func = TaskEmbedding(metric='KME').cuda()
     elif options.task_embedding == 'Cosine':
         te_func = TaskEmbedding(metric='Cosine').cuda()
+    elif options.task_embedding == 'Entropy_SVM':
+        te_func = TaskEmbedding(metric='Entropy_SVM').cuda()
     elif options.task_embedding == 'Relation':
         te_func = TaskEmbedding(metric='Relation', dataset=options.dataset).cuda()
     elif options.task_embedding == 'None':
@@ -239,7 +241,10 @@ if __name__ == '__main__':
 
             # print(emb_support.size(), emb_query.size())
 
-            emb_support, emb_query, G_support, G_query = add_te_func(emb_support, emb_query, data_support, data_query)
+            emb_support, emb_query, G_support, G_query = add_te_func(
+                emb_support, emb_query, data_support, data_query,
+                labels_support, opt.train_way, opt.train_shot
+            )
 
             emb_support = postprocessing_net(emb_support)
             emb_query = postprocessing_net(emb_query)
@@ -284,7 +289,10 @@ if __name__ == '__main__':
             emb_query = embedding_net(data_query.reshape([-1] + list(data_query.shape[-3:])))
             emb_query = emb_query.reshape(1, test_n_query, -1)
 
-            emb_support, emb_query, _, _ = add_te_func(emb_support, emb_query, data_support, data_query)
+            emb_support, emb_query, _, _ = add_te_func(
+                emb_support, emb_query, data_support, data_query,
+                labels_support, opt.test_way, opt.val_shot
+            )
             # emb_query, _ = add_te_func(emb_query, emb_support)
             # emb_support, _ = add_te_func(emb_support, emb_support)
 

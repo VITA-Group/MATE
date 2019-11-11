@@ -99,7 +99,7 @@ class Relation(nn.Module):
         self.encoder = RelationNetworkEncoder()
         self.relation_network = RelationNetwork(hidden_size, dataset)
 
-    def forward(self, emb_support, emb_query, data_support, data_query):
+    def forward(self, emb_support, emb_query, data_support, data_query, *args):
         """
         The input is an episode of samples [xs, xq] of shape (n_support + n_query, im_w, im_h).
 

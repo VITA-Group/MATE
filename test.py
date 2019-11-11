@@ -32,12 +32,13 @@ def get_model(options):
     elif options.network == 'ResNet':
         if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
             network = resnet12(avg_pool=False, drop_rate=0.1, dropblock_size=5).cuda()
-            device_ids = list(range(len(options.gpu.split(','))))
-            network = torch.nn.DataParallel(network, device_ids=device_ids)
-            # network = resnet12(avg_pool=False, drop_rate=0.1, dropblock_size=5).cuda()
+            # device_ids = list(range(len(options.gpu.split(','))))
+            # network = torch.nn.DataParallel(network, device_ids=device_ids)
             # network = torch.nn.DataParallel(network, device_ids=[0, 1, 2, 3])
         else:
             network = resnet12(avg_pool=False, drop_rate=0.1, dropblock_size=2).cuda()
+        device_ids = list(range(len(options.gpu.split(','))))
+        network = torch.nn.DataParallel(network, device_ids=device_ids)
     else:
         print ("Cannot recognize the network type")
         assert(False)
@@ -99,6 +100,9 @@ def get_task_embedding_func(options):
         te_func = TaskEmbedding(metric='None').cuda()
     else:
         raise ValueError('Cannot recognize the task embedding type `{}`'.format(options.task_embedding))
+
+    device_ids = list(range(len(options.gpu.split(','))))
+    te_func = torch.nn.DataParallel(te_func, device_ids=device_ids)
 
     return te_func
 

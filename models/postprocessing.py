@@ -93,7 +93,7 @@ class PostProcessingNetConv1d(nn.Module):
 
     def forward(self, x):
         emb_sample, emb_task = x.split(x.size(1) // 2, dim=1) # (bs, d/2), (bs, d/2)
-        emb_fusion = torch.concat((emb_sample.unsqueeze(1), emb_task.unsqueeze(1)), dim=1) # (bs, 2, d/2)
+        emb_fusion = torch.cat((emb_sample.unsqueeze(1), emb_task.unsqueeze(1)), dim=1) # (bs, 2, d/2)
         out = self.layer1(emb_fusion)
         out = self.layer2(out)
         out = self.layer3(out)

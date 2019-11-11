@@ -256,8 +256,10 @@ if __name__ == '__main__':
                 labels_support, opt.train_way, opt.train_shot
             )
 
-            emb_support = postprocessing_net(emb_support)
-            emb_query = postprocessing_net(emb_query)
+            emb_support = postprocessing_net(emb_support.reshape([-1] + list(emb_support.size()[2:])))
+            emb_support = emb_support.reshape(opt.episodes_per_batch, train_n_support, -1)
+            emb_query = postprocessing_net(emb_query.reshape([-1] + list(emb_query.size()[2:])))
+            emb_query = emb_query.reshape(opt.episodes_per_batch, train_n_query, -1)
 
             logit_query = cls_head(emb_query, emb_support, labels_support, opt.train_way, opt.train_shot)
 

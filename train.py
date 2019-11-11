@@ -45,7 +45,9 @@ def get_model(options):
     elif options.network == 'ResNet':
         if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
             network = resnet12(avg_pool=False, drop_rate=0.1, dropblock_size=5).cuda()
-            network = torch.nn.DataParallel(network, device_ids=[0, 1, 2, 3])
+            device_ids = list(range(len(options.gpu.split(','))))
+            network = torch.nn.DataParallel(network, device_ids=device_ids)
+            # network = torch.nn.DataParallel(network, device_ids=[0, 1, 2, 3])
         else:
             network = resnet12(avg_pool=False, drop_rate=0.1, dropblock_size=2).cuda()
     else:

@@ -165,7 +165,7 @@ if __name__ == '__main__':
                             help='epsilon of label smoothing')
     parser.add_argument('--task-embedding', type=str, default='None',
                             help='choose which type of task embedding will be used')
-    parser.add_argument('--post-processing', action='store_true',
+    parser.add_argument('--post-processing', type=str, default='None',
                             help='use an extra post processing net for sample embeddings')
 
     opt = parser.parse_args()

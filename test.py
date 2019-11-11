@@ -14,7 +14,7 @@ from models.protonet_embedding import ProtoNetEmbedding
 from models.R2D2_embedding import R2D2Embedding
 from models.ResNet12_embedding import resnet12
 from models.task_embedding import TaskEmbedding
-from models.postprocessing import PostProcessingNet
+from models.postprocessing import PostProcessingNet, PostProcessingNetConv1d
 
 from models.classification_heads import ClassificationHead
 
@@ -104,9 +104,15 @@ def get_task_embedding_func(options):
 
 def get_postprocessing_model(options):
     # Choose the post processing network for embeddings
-    if options.post_processing:
+    if options.post_processing == 'FC':
         return PostProcessingNet(dataset=options.dataset, task_embedding=options.task_embedding).cuda()
-    else:
+    if options.post_processing == 'Conv1d':
+        postprocessing_net = PostProcessingNetConv1d().cuda()
+        if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
+            device_ids = list(range(len(options.gpu.split(','))))
+            postprocessing_net = torch.nn.DataParallel(postprocessing_net, device_ids=device_ids)
+        return postprocessing_net
+    elif options.post_processing == 'None':
         return nn.Identity().cuda()
 
 
@@ -131,7 +137,7 @@ if __name__ == '__main__':
                             help='choose which classification head to use. miniImageNet, tieredImageNet, CIFAR_FS, FC100')
     parser.add_argument('--task-embedding', type=str, default='None',
                             help='choose which type of task embedding will be used')
-    parser.add_argument('--post-processing', action='store_true',
+    parser.add_argument('--post-processing', type=str, default='None',
                             help='use an extra post processing net for sample embeddings')
 
     opt = parser.parse_args()

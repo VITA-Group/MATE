@@ -167,6 +167,7 @@ if __name__ == '__main__':
     parser.add_argument('--test-way', type=int, default=5,
                             help='number of classes in one test (or validation) episode')
     parser.add_argument('--save-path', default='./experiments/exp_1')
+    parser.add_argument('--load', default=None, help='path of the checkpoint file')
     parser.add_argument('--gpu', default='0, 1, 2, 3')
     parser.add_argument('--network', type=str, default='ProtoNet',
                             help='choose which embedding network to use. ProtoNet, R2D2, ResNet')
@@ -227,15 +228,31 @@ if __name__ == '__main__':
                                  {'params': cls_head.parameters()}], lr=0.1, momentum=0.9, \
                                           weight_decay=5e-4, nesterov=True)
 
+    # Load saved model checkpoints
+    if opt.load is not None:
+        saved_models = torch.load(opt.load)
+        # NOTE: there is a `-1` because `epoch` starts counting from 1
+        last_epoch = saved_models['epoch'] - 1 if 'epoch' in saved_models.keys() else -1
+        embedding_net.load_state_dict(saved_models['embedding'])
+        cls_head.load_state_dict(saved_models['head'])
+        if 'task_embedding' in saved_models.keys():
+            add_te_func.load_state_dict(saved_models['task_embedding'])
+        if 'postprocessing' in saved_models.keys():
+            postprocessing_net.load_state_dict(saved_models['postprocessing'])
+        if 'optimizer' in saved_models.keys():
+            optimizer.load_state_dict(saved_models['postprocessing'])
+    else:
+        last_epoch = -1
+
     lambda_epoch = lambda e: 1.0 if e < 20 else (0.06 if e < 40 else 0.012 if e < 50 else (0.0024))
-    lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_epoch, last_epoch=-1)
+    lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_epoch, last_epoch=last_epoch)
 
     max_val_acc = 0.0
 
     timer = Timer()
     x_entropy = torch.nn.CrossEntropyLoss()
 
-    for epoch in range(1, opt.num_epoch + 1):
+    for epoch in range(last_epoch + 2, opt.num_epoch + 1):
         # Train on the training split
         lr_scheduler.step()
 
@@ -247,7 +264,8 @@ if __name__ == '__main__':
         log(log_file_path, 'Train Epoch: {}\tLearning Rate: {:.4f}'.format(
                             epoch, epoch_learning_rate))
 
-        _, _ = [x.train() for x in (embedding_net, cls_head)]
+        # _, _ = [x.train() for x in (embedding_net, cls_head)]
+        _, _, _, _ = [x.train() for x in (embedding_net, cls_head, add_te_func, postprocessing_net)]
 
         train_accuracies = []
         train_losses = []
@@ -346,10 +364,12 @@ if __name__ == '__main__':
 
         if val_acc_avg > max_val_acc:
             max_val_acc = val_acc_avg
-            torch.save({'embedding': embedding_net.state_dict(),
+            torch.save({'epoch': epoch,
+                        'embedding': embedding_net.state_dict(),
                         'head': cls_head.state_dict(),
                         'task_embedding': add_te_func.state_dict(),
-                        'postprocessing': postprocessing_net.state_dict()},
+                        'postprocessing': postprocessing_net.state_dict(),
+                        'optimizer': optimizer.state_dict()},
                        os.path.join(opt.save_path, 'best_model.pth'))
             log(log_file_path, 'Validation Epoch: {}\t\t\tLoss: {:.4f}\tAccuracy: {:.2f} ± {:.2f} % (Best)'\
                   .format(epoch, val_loss_avg, val_acc_avg, val_acc_ci95))
@@ -357,17 +377,21 @@ if __name__ == '__main__':
             log(log_file_path, 'Validation Epoch: {}\t\t\tLoss: {:.4f}\tAccuracy: {:.2f} ± {:.2f} %'\
                   .format(epoch, val_loss_avg, val_acc_avg, val_acc_ci95))
 
-        torch.save({'embedding': embedding_net.state_dict(),
+        torch.save({'epoch': epoch,
+                    'embedding': embedding_net.state_dict(),
                     'head': cls_head.state_dict(),
                     'task_embedding': add_te_func.state_dict(),
-                    'postprocessing': postprocessing_net.state_dict()},
+                    'postprocessing': postprocessing_net.state_dict(),
+                    'optimizer': optimizer.state_dict()},
                    os.path.join(opt.save_path, 'last_epoch.pth'))
 
         if epoch % opt.save_epoch == 0:
-            torch.save({'embedding': embedding_net.state_dict(),
+            torch.save({'epoch': epoch,
+                        'embedding': embedding_net.state_dict(),
                         'head': cls_head.state_dict(),
                         'task_embedding': add_te_func.state_dict(),
-                        'postprocessing': postprocessing_net.state_dict()},
+                        'postprocessing': postprocessing_net.state_dict(),
+                        'optimizer': optimizer.state_dict()},
                        os.path.join(opt.save_path, 'epoch_{}.pth'.format(epoch)))
 
         log(log_file_path, 'Elapsed Time: {}/{}\n'.format(timer.measure(), timer.measure(epoch / float(opt.num_epoch))))

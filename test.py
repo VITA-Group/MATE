@@ -112,15 +112,19 @@ def get_postprocessing_model(options):
         return PostProcessingNet(dataset=options.dataset, task_embedding=options.task_embedding).cuda()
     if options.post_processing == 'Conv1d':
         postprocessing_net = PostProcessingNetConv1d().cuda()
-        if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
-            device_ids = list(range(len(options.gpu.split(','))))
-            postprocessing_net = torch.nn.DataParallel(postprocessing_net, device_ids=device_ids)
+        # if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
+        #     device_ids = list(range(len(options.gpu.split(','))))
+        #     postprocessing_net = torch.nn.DataParallel(postprocessing_net, device_ids=device_ids)
+        device_ids = list(range(len(options.gpu.split(','))))
+        postprocessing_net = torch.nn.DataParallel(postprocessing_net, device_ids=device_ids)
         return postprocessing_net
     if options.post_processing == 'Conv1d_SelfAttn':
         postprocessing_net = PostProcessingNetConv1d_SelfAttn().cuda()
-        if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
-            device_ids = list(range(len(options.gpu.split(','))))
-            postprocessing_net = torch.nn.DataParallel(postprocessing_net, device_ids=device_ids)
+        # if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
+        #     device_ids = list(range(len(options.gpu.split(','))))
+        #     postprocessing_net = torch.nn.DataParallel(postprocessing_net, device_ids=device_ids)
+        device_ids = list(range(len(options.gpu.split(','))))
+        postprocessing_net = torch.nn.DataParallel(postprocessing_net, device_ids=device_ids)
         return postprocessing_net
     elif options.post_processing == 'None':
         return nn.Identity().cuda()

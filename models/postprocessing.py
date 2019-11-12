@@ -140,8 +140,9 @@ class PostProcessingSelfAttnModule(nn.Module):
 
 class PostProcessingNetConv1d_SelfAttn(nn.Module):
     # def __init__(self, out_dim=None, hidden_dim=None, dataset='MiniImageNet', task_embedding='None'):
-    def __init__(self):
+    def __init__(self, skip_attn1=False):
         super(PostProcessingNetConv1d_SelfAttn, self).__init__()
+        self.skip_attn1 = skip_attn1
 
         self.layer1 = nn.Sequential(
             nn.Conv1d(in_channels=2, out_channels=4, kernel_size=3, stride=1, padding=1),
@@ -167,7 +168,8 @@ class PostProcessingNetConv1d_SelfAttn(nn.Module):
         emb_sample, emb_task = x.split(x.size(1) // 2, dim=1) # (bs, d/2), (bs, d/2)
         emb_fusion = torch.cat((emb_sample.unsqueeze(1), emb_task.unsqueeze(1)), dim=1) # (bs, 2, d/2)
         out = self.layer1(emb_fusion)
-        out, _ = self.attn1(out)
+        if not self.skip_attn1:
+            out, _ = self.attn1(out)
         out = self.layer2(out)
         out, _ = self.attn2(out)
         out = self.layer3(out)

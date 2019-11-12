@@ -140,29 +140,56 @@ class PostProcessingSelfAttnModule(nn.Module):
 
 class PostProcessingNetConv1d_SelfAttn(nn.Module):
     # def __init__(self, out_dim=None, hidden_dim=None, dataset='MiniImageNet', task_embedding='None'):
-    def __init__(self, skip_attn1=False):
+    def __init__(self, dataset='miniImageNet'):
         super(PostProcessingNetConv1d_SelfAttn, self).__init__()
-        self.skip_attn1 = skip_attn1
+        self.dataset = dataset
+        # self.skip_attn1 = skip_attn1
+        if self.dataset == 'miniImageNet' or self.dataset == 'tieredImageNet':
+            self.out_channels = [16, 64, 128]
+            self.max_pool_ks = [8, 4]
+            self.ratio = 8
+            self.skip_attn1 = False
+        else:
+            self.out_channels = [4, 8, 16]
+            self.max_pool_ks = [2, 2]
+            self.ratio = 4
+            self.skip_attn1 = False
 
         self.layer1 = nn.Sequential(
-            nn.Conv1d(in_channels=2, out_channels=4, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm1d(4),
+            nn.Conv1d(in_channels=2, out_channels=self.out_channels[0], kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm1d(self.out_channels[0]),
             nn.ReLU(),
-            nn.MaxPool1d(2)
+            nn.MaxPool1d(self.max_pool_ks[0])
         )
         self.layer2 = nn.Sequential(
-            nn.Conv1d(in_channels=4, out_channels=8, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm1d(8),
+            nn.Conv1d(in_channels=self.out_channels[0], out_channels=self.out_channels[1], kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm1d(self.out_channels[1]),
             nn.ReLU(),
-            nn.MaxPool1d(2)
+            nn.MaxPool1d(self.max_pool_ks[1])
         )
         self.layer3 = nn.Sequential(
-            nn.Conv1d(in_channels=8, out_channels=16, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm1d(16)
+            nn.Conv1d(in_channels=self.out_channels[1], out_channels=self.out_channels[2], kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm1d(self.out_channels[2])
         )
+        # self.layer1 = nn.Sequential(
+        #     nn.Conv1d(in_channels=2, out_channels=4, kernel_size=3, stride=1, padding=1),
+        #     nn.BatchNorm1d(4),
+        #     nn.ReLU(),
+        #     nn.MaxPool1d(2)
+        # )
+        # self.layer2 = nn.Sequential(
+        #     nn.Conv1d(in_channels=4, out_channels=8, kernel_size=3, stride=1, padding=1),
+        #     nn.BatchNorm1d(8),
+        #     nn.ReLU(),
+        #     nn.MaxPool1d(2)
+        # )
+        # self.layer3 = nn.Sequential(
+        #     nn.Conv1d(in_channels=8, out_channels=16, kernel_size=4, stride=2, padding=1),
+        #     nn.BatchNorm1d(16)
+        # )
 
-        self.attn1 = PostProcessingSelfAttnModule(in_dim=4)
-        self.attn2 = PostProcessingSelfAttnModule(in_dim=8)
+        self.attn1 = PostProcessingSelfAttnModule(in_dim=self.out_channels[0], ratio=self.ratio)
+        self.attn2 = PostProcessingSelfAttnModule(in_dim=self.out_channels[1], ratio=self.ratio)
 
     def forward(self, x):
         emb_sample, emb_task = x.split(x.size(1) // 2, dim=1) # (bs, d/2), (bs, d/2)

@@ -227,8 +227,10 @@ if __name__ == '__main__':
     postprocessing_net = get_postprocessing_model(opt)
 
     optimizer = torch.optim.SGD([{'params': embedding_net.parameters()},
-                                 {'params': cls_head.parameters()}], lr=0.1, momentum=0.9, \
-                                          weight_decay=5e-4, nesterov=True)
+                                 {'params': cls_head.parameters()},
+                                 {'params': add_te_func.parameters()},
+                                 {'params': postprocessing_net.parameters()}],
+                                lr=0.1, momentum=0.9, weight_decay=5e-4, nesterov=True)
 
     # Load saved model checkpoints
     if opt.load is not None:

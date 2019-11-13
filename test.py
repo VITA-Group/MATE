@@ -14,7 +14,7 @@ from models.protonet_embedding import ProtoNetEmbedding
 from models.R2D2_embedding import R2D2Embedding
 from models.ResNet12_embedding import resnet12
 from models.task_embedding import TaskEmbedding
-from models.postprocessing import PostProcessingNet, PostProcessingNetConv1d, PostProcessingNetConv1d_SelfAttn
+from models.postprocessing import Identity, PostProcessingNet, PostProcessingNetConv1d, PostProcessingNetConv1d_SelfAttn
 
 from models.classification_heads import ClassificationHead
 
@@ -129,7 +129,7 @@ def get_postprocessing_model(options):
         postprocessing_net = torch.nn.DataParallel(postprocessing_net, device_ids=device_ids)
         return postprocessing_net
     elif options.post_processing == 'None':
-        return nn.Identity().cuda()
+        return Identity().cuda()
 
 
 if __name__ == '__main__':

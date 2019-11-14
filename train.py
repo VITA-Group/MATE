@@ -244,7 +244,7 @@ if __name__ == '__main__':
         if 'postprocessing' in saved_models.keys():
             postprocessing_net.load_state_dict(saved_models['postprocessing'])
         if 'optimizer' in saved_models.keys():
-            optimizer.load_state_dict(saved_models['postprocessing'])
+            optimizer.load_state_dict(saved_models['optimizer'])
     else:
         last_epoch = -1
 

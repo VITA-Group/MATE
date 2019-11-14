@@ -50,30 +50,6 @@ class PostProcessingNetConv1d(nn.Module):
     # def __init__(self, out_dim=None, hidden_dim=None, dataset='MiniImageNet', task_embedding='None'):
     def __init__(self):
         super(PostProcessingNetConv1d, self).__init__()
-        # self.out_dim = out_dim
-        # self.hidden_dim = hidden_dim
-        # self.dataset = dataset
-        # self.task_embedding = task_embedding
-
-        # if 'imagenet' in self.dataset.lower():
-        #     self.in_dim = 16000
-        #     self.dropout = 0.2
-        # elif 'cifar' in self.dataset.lower() or 'FS' in self.dataset:
-        #     self.in_dim = 2560
-        #     self.dropout = 0.2
-        # elif 'omniglot' in self.dataset.lower():
-        #     raise NotImplementedError('Post processing module is not implemented for Omniglot dataset yet')
-        # else:
-        #     raise ValueError('Cannot recognize dataset {}'.format(self.dataset))
-
-        # if self.task_embedding != 'None':
-        #     self.in_dim *= 2
-
-        # if self.out_dim is None:
-        #     self.out_dim = self.in_dim
-        # if self.hidden_dim is None:
-        #     self.hidden_dim = self.out_dim
-
         self.layer1 = nn.Sequential(
             nn.Conv1d(in_channels=2, out_channels=4, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm1d(4),
@@ -202,3 +178,25 @@ class PostProcessingNetConv1d_SelfAttn(nn.Module):
         out = self.layer3(out)
         return out
 
+
+class Identity(nn.Module):
+    r"""A placeholder identity operator that is argument-insensitive.
+
+    Args:
+        args: any argument (unused)
+        kwargs: any keyword argument (unused)
+
+    Examples::
+
+        >>> m = nn.Identity(54, unused_argument1=0.1, unused_argument2=False)
+        >>> input = torch.randn(128, 20)
+        >>> output = m(input)
+        >>> print(output.size())
+        torch.Size([128, 20])
+
+    """
+    def __init__(self, *args, **kwargs):
+        super(Identity, self).__init__()
+
+    def forward(self, input):
+        return input

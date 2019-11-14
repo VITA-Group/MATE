@@ -148,7 +148,7 @@ class PostProcessingNetConv1d_SelfAttn(nn.Module):
             self.out_channels = [16, 64, 128]
             self.max_pool_ks = [8, 4]
             self.ratio = 8
-            self.skip_attn1 = False
+            self.skip_attn1 = True
         else:
             self.out_channels = [4, 8, 16]
             self.max_pool_ks = [2, 2]

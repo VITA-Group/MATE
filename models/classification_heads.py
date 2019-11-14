@@ -25,6 +25,29 @@ def computeGramMatrix(A, B):
     return torch.bmm(A, B.transpose(1,2))
 
 
+def computeBiPoolingGramMatrix(A, B):
+    """
+    Constructs a linear kernel matrix between A and B with bilinear pooling.
+    We assume that each row in A and B represents a 2d-dimensional feature vector,
+    consisting of a d-dim sample feature vector and another d-dim task feature
+    vector.
+
+    Parameters:
+      A:  a (n_batch, n, 2*d) Tensor.
+      B:  a (n_batch, m, 2*d) Tensor.
+    Returns: a (n_batch, n, m) Tensor.
+    """
+
+    assert(A.dim() == 3)
+    assert(B.dim() == 3)
+    assert(A.size(0) == B.size(0) and A.size(2) == B.size(2))
+
+    A_sample, A_task = A.split(A.size(-1) // 2, dim=-1)
+    B_sample, B_task = B.split(B.size(-1) // 2, dim=-1)
+
+    return computeGramMatrix(A_sample, B_sample) * computeGramMatrix(A_task, B_task)
+
+
 def binv(b_mat):
     """
     Computes an inverse of each matrix in the batch.
@@ -525,6 +548,8 @@ def MetaOptNetHead_SVM_WW(query, support, support_labels, n_way, n_shot, C_reg=0
 class ClassificationHead(nn.Module):
     def __init__(self, base_learner='MetaOptNet', enable_scale=True):
         super(ClassificationHead, self).__init__()
+        if ('SVM-CS-BiP' in base_learner):
+            self.head = MetaOptNetHead_SVM_CS_BiP
         if ('SVM-CS' in base_learner):
             self.head = MetaOptNetHead_SVM_CS
         elif ('Ridge' in base_learner):
@@ -550,3 +575,96 @@ class ClassificationHead(nn.Module):
             return self.scale * self.head(query, support, support_labels, n_way, n_shot, **kwargs)
         else:
             return self.head(query, support, support_labels, n_way, n_shot, **kwargs)
+
+
+def MetaOptNetHead_SVM_CS_BiP(query, support, support_labels, n_way, n_shot, C_reg=0.1, double_precision=False, maxIter=15):
+    """
+    Fits the support set with multi-class SVM and
+    returns the classification score on the query set.
+
+    This is the multi-class SVM presented in:
+    On the Algorithmic Implementation of Multiclass Kernel-based Vector Machines
+    (Crammer and Singer, Journal of Machine Learning Research 2001).
+
+    This model is the classification head that we use for the final version.
+    Parameters:
+      query:  a (tasks_per_batch, n_query, d) Tensor.
+      support:  a (tasks_per_batch, n_support, d) Tensor.
+      support_labels: a (tasks_per_batch, n_support) Tensor.
+      n_way: a scalar. Represents the number of classes in a few-shot classification task.
+      n_shot: a scalar. Represents the number of support examples given per class.
+      C_reg: a scalar. Represents the cost parameter C in SVM.
+    Returns: a (tasks_per_batch, n_query, n_way) Tensor.
+    """
+
+    tasks_per_batch = query.size(0)
+    n_support = support.size(1)
+    n_query = query.size(1)
+
+    assert(query.dim() == 3)
+    assert(support.dim() == 3)
+    assert(query.size(0) == support.size(0) and query.size(2) == support.size(2))
+    assert(n_support == n_way * n_shot)      # n_support must equal to n_way * n_shot
+
+    #Here we solve the dual problem:
+    #Note that the classes are indexed by m & samples are indexed by i.
+    #min_{\alpha}  0.5 \sum_m ||w_m(\alpha)||^2 + \sum_i \sum_m e^m_i alpha^m_i
+    #s.t.  \alpha^m_i <= C^m_i \forall m,i , \sum_m \alpha^m_i=0 \forall i
+
+    #where w_m(\alpha) = \sum_i \alpha^m_i x_i,
+    #and C^m_i = C if m  = y_i,
+    #C^m_i = 0 if m != y_i.
+    #This borrows the notation of liblinear.
+
+    #\alpha is an (n_support, n_way) matrix
+    kernel_matrix = computeBiPoolingGramMatrix(support, support)
+
+    id_matrix_0 = torch.eye(n_way).expand(tasks_per_batch, n_way, n_way).cuda()
+    block_kernel_matrix = batched_kronecker(kernel_matrix, id_matrix_0)
+    #This seems to help avoid PSD error from the QP solver.
+    block_kernel_matrix += 1.0 * torch.eye(n_way*n_support).expand(tasks_per_batch, n_way*n_support, n_way*n_support).cuda()
+
+    support_labels_one_hot = one_hot(support_labels.view(tasks_per_batch * n_support), n_way) # (tasks_per_batch * n_support, n_support)
+    support_labels_one_hot = support_labels_one_hot.view(tasks_per_batch, n_support, n_way)
+    support_labels_one_hot = support_labels_one_hot.reshape(tasks_per_batch, n_support * n_way)
+
+    G = block_kernel_matrix
+    e = -1.0 * support_labels_one_hot
+    #print (G.size())
+    #This part is for the inequality constraints:
+    #\alpha^m_i <= C^m_i \forall m,i
+    #where C^m_i = C if m  = y_i,
+    #C^m_i = 0 if m != y_i.
+    id_matrix_1 = torch.eye(n_way * n_support).expand(tasks_per_batch, n_way * n_support, n_way * n_support)
+    C = Variable(id_matrix_1)
+    h = Variable(C_reg * support_labels_one_hot)
+    #print (C.size(), h.size())
+    #This part is for the equality constraints:
+    #\sum_m \alpha^m_i=0 \forall i
+    id_matrix_2 = torch.eye(n_support).expand(tasks_per_batch, n_support, n_support).cuda()
+
+    A = Variable(batched_kronecker(id_matrix_2, torch.ones(tasks_per_batch, 1, n_way).cuda()))
+    b = Variable(torch.zeros(tasks_per_batch, n_support))
+    #print (A.size(), b.size())
+    if double_precision:
+        G, e, C, h, A, b = [x.double().cuda() for x in [G, e, C, h, A, b]]
+    else:
+        G, e, C, h, A, b = [x.float().cuda() for x in [G, e, C, h, A, b]]
+
+    # Solve the following QP to fit SVM:
+    #        \hat z =   argmin_z 1/2 z^T G z + e^T z
+    #                 subject to Cz <= h
+    # We use detach() to prevent backpropagation to fixed variables.
+    qp_sol = QPFunction(verbose=False, maxIter=maxIter)(G, e.detach(), C.detach(), h.detach(), A.detach(), b.detach())
+
+    # Compute the classification score.
+    compatibility = computeBiPoolingGramMatrix(support, query)
+    compatibility = compatibility.float()
+    compatibility = compatibility.unsqueeze(3).expand(tasks_per_batch, n_support, n_query, n_way)
+    qp_sol = qp_sol.reshape(tasks_per_batch, n_support, n_way)
+    logits = qp_sol.float().unsqueeze(2).expand(tasks_per_batch, n_support, n_query, n_way)
+    logits = logits * compatibility
+    logits = torch.sum(logits, 1)
+
+    return logits
+

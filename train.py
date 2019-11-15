@@ -391,7 +391,7 @@ if __name__ == '__main__':
                     'optimizer': optimizer.state_dict()},
                    os.path.join(opt.save_path, 'last_epoch.pth'))
 
-        if epoch % opt.save_epoch == 0:
+        if epoch % opt.save_epoch == 0 or epoch == 21:
             torch.save({'epoch': epoch,
                         'embedding': embedding_net.state_dict(),
                         'head': cls_head.state_dict(),

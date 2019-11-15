@@ -52,6 +52,8 @@ def get_model(options):
         cls_head = ClassificationHead(base_learner='R2D2').cuda()
     elif opt.head == 'SVM':
         cls_head = ClassificationHead(base_learner='SVM-CS').cuda()
+    elif options.head == 'SVM-BiP':
+        cls_head = ClassificationHead(base_learner='SVM-CS-BiP').cuda()
     else:
         print ("Cannot recognize the classification head type")
         assert(False)

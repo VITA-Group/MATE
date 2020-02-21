@@ -576,12 +576,14 @@ def MetaOptNetHead_SVM_WW(query, support, support_labels, n_way, n_shot, C_reg=0
 class ClassificationHead(nn.Module):
     def __init__(self, base_learner='MetaOptNet', enable_scale=True):
         super(ClassificationHead, self).__init__()
+        self.base_learner = base_learner
+
         if ('SVM-CS-BiP' in base_learner):
             self.head = MetaOptNetHead_SVM_CS_BiP
-        if ('SVM-CS' in base_learner):
-            self.head = MetaOptNetHead_SVM_CS
-        if ('SVM-CS-WNorm' in base_learner):
+        elif ('SVM-CS-WNorm' in base_learner):
             self.head = MetaOptNetHead_SVM_CS_WNorm
+        elif ('SVM-CS' in base_learner):
+            self.head = MetaOptNetHead_SVM_CS
         elif ('Ridge' in base_learner):
             self.head = MetaOptNetHead_Ridge
         elif ('R2D2' in base_learner):
@@ -601,10 +603,18 @@ class ClassificationHead(nn.Module):
         self.scale = nn.Parameter(torch.FloatTensor([1.0]))
 
     def forward(self, query, support, support_labels, n_way, n_shot, **kwargs):
-        if self.enable_scale:
-            return self.scale * self.head(query, support, support_labels, n_way, n_shot, **kwargs)
+        scale = self.scale if self.enable_scale else 1.0
+
+        if 'WNorm' in self.base_learner:
+            logits, wnorm = self.head(query, support, support_labels, n_way, n_shot, **kwargs)
+            return scale * logits, wnorm
         else:
-            return self.head(query, support, support_labels, n_way, n_shot, **kwargs)
+            return scale * self.head(query, support, support_labels, n_way, n_shot, **kwargs)
+
+        # if self.enable_scale:
+        #     return self.scale * self.head(query, support, support_labels, n_way, n_shot, **kwargs)
+        # else:
+        #     return self.head(query, support, support_labels, n_way, n_shot, **kwargs)
 
 
 def MetaOptNetHead_SVM_CS_BiP(query, support, support_labels, n_way, n_shot, C_reg=0.1, double_precision=False, maxIter=15):

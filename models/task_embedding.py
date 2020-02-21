@@ -15,7 +15,7 @@ from models.classification_heads import ClassificationHead
 def computeGradientPenalty(outputs, inputs):
     return autograd.grad(
         outputs=outputs, inputs=inputs, grad_outputs=torch.ones_like(outputs),
-        create_graph=False, retain_graph=False, only_inputs=True)
+        create_graph=False, retain_graph=False, only_inputs=True)[0]
 
 
 def TaskEmbedding_None(emb_support, emb_query, *args):
@@ -74,7 +74,7 @@ class TaskEmbedding_Entropy_SVMHead(nn.Module):
 
 class TaskEmbedding_Cat_SVM_WGrad(nn.Module):
     def __init__(self):
-        super(TaskEmbedding_Entropy_SVMHead, self).__init__()
+        super(TaskEmbedding_Cat_SVM_WGrad, self).__init__()
         self.cls_head = ClassificationHead(base_learner='SVM-CS-WNorm')
 
     def forward(self, emb_support, emb_query, data_support, data_query,

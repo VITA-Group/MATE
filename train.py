@@ -104,7 +104,7 @@ def get_dataset(options):
 def get_task_embedding_func(options):
     # Choose the task embedding function
     te_args = dict(dataset=options.dataset) if options.task_embedding == 'Relation' else dict()
-    te_func = TaskEmbedding(metric=options.task_embedding, **te_args)
+    te_func = TaskEmbedding(metric=options.task_embedding, **te_args).cuda()
     # if options.task_embedding == 'KME':
     #     te_func = TaskEmbedding(metric='KME').cuda()
     # elif options.task_embedding == 'Cosine':
@@ -264,7 +264,6 @@ if __name__ == '__main__':
 
     for epoch in range(last_epoch + 2, opt.num_epoch + 1):
         # Train on the training split
-        lr_scheduler.step()
 
         # Fetch the current epoch's learning rate
         epoch_learning_rate = 0.1
@@ -405,3 +404,6 @@ if __name__ == '__main__':
                        os.path.join(opt.save_path, 'epoch_{}.pth'.format(epoch)))
 
         log(log_file_path, 'Elapsed Time: {}/{}\n'.format(timer.measure(), timer.measure(epoch / float(opt.num_epoch))))
+
+        # Learning rate decay
+        lr_scheduler.step()

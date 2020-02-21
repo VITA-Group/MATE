@@ -55,7 +55,7 @@ class BasicBlock(nn.Module):
         out += residual
         out = self.relu(out)
         out = self.maxpool(out)
-        
+
         if self.drop_rate > 0:
             if self.drop_block == True:
                 feat_size = out.size()[2]
@@ -84,7 +84,7 @@ class ResNet(nn.Module):
         self.keep_avg_pool = avg_pool
         self.dropout = nn.Dropout(p=1 - self.keep_prob, inplace=False)
         self.drop_rate = drop_rate
-        
+
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='leaky_relu')
@@ -123,3 +123,4 @@ def resnet12(keep_prob=1.0, avg_pool=False, **kwargs):
     """
     model = ResNet(BasicBlock, keep_prob=keep_prob, avg_pool=avg_pool, **kwargs)
     return model
+

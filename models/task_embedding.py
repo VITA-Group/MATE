@@ -5,10 +5,17 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch import autograd
 from torch.autograd import Variable
 
 from models.relation_net import Relation
 from models.classification_heads import ClassificationHead
+
+
+def computeGradientPenalty(outputs, inputs):
+    return autograd.grad(
+        outputs=outputs, inputs=inputs, grad_outputs=torch.ones_like(outputs),
+        create_graph=False, retain_graph=False, only_inputs=True)
 
 
 def TaskEmbedding_None(emb_support, emb_query, *args):
@@ -64,6 +71,35 @@ class TaskEmbedding_Entropy_SVMHead(nn.Module):
         # NOTE: `None` in the return statement is preserved for G
         return augmented_support, augmented_query, entropy, entropy
 
+
+class TaskEmbedding_Cat_SVM_WGrad(nn.Module):
+    def __init__(self):
+        super(TaskEmbedding_Entropy_SVMHead, self).__init__()
+        self.cls_head = ClassificationHead(base_learner='SVM-CS-WNorm')
+
+    def forward(self, emb_support, emb_query, data_support, data_query,
+                labels_support, train_way, train_shot):
+        n_episode, n_support, d = emb_support.size()
+        # Train the SVM head
+        logit_support, wnorm = self.cls_head(emb_support, emb_support, labels_support, train_way, train_shot)
+
+        # Compute the gradient of `wnorm` w.r.t. `emb_support`
+        wgrad = computeGradientPenalty(wnorm, emb_support) # (tasks_per_batch, n_support, d)
+        wgrad_abs = wgrad.abs()
+        # Normalize gradient
+        with torch.no_grad():
+            wgrad_abs_sum = torch.sum(wgrad_abs, dim=(1,2), keepdim=True)
+        G = wgrad_abs / wgrad_abs_sum * d
+
+        # Compute task features
+        emb_task = (emb_support * G).sum(dim=1, keepdim=True) # (tasks_per_batch, 1, d)
+
+        augmented_support = torch.cat([emb_support, emb_task.expand_as(emb_support)], dim=-1)
+        augmented_query = torch.cat([emb_query, emb_task.expand_as(emb_query)], dim=-1)
+        # NOTE: `None` in the return statement is preserved for G
+        return augmented_support, augmented_query, None, None
+
+
 class TaskEmbedding_Entropy_RidgeHead(nn.Module):
     def __init__(self):
         super(TaskEmbedding_Entropy_RidgeHead, self).__init__()
@@ -85,6 +121,7 @@ class TaskEmbedding_Entropy_RidgeHead(nn.Module):
         augmented_query = torch.cat([emb_query, emb_task.expand_as(emb_query)], dim=-1)
         # NOTE: `None` in the return statement is preserved for G
         return augmented_support, augmented_query, entropy, entropy
+
 
 class TaskEmbedding_Entropy_SVMHead_NoGrad(nn.Module):
     def __init__(self):
@@ -121,6 +158,8 @@ class TaskEmbedding(nn.Module):
             self.te_func = TaskEmbedding_Entropy_SVMHead_NoGrad()
         elif ('Entropy_SVM' in metric):
             self.te_func = TaskEmbedding_Entropy_SVMHead()
+        elif ('Cat_SVM_WGrad' in metric):
+            self.te_func = TaskEmbedding_Cat_SVM_WGrad()
         elif ('Entropy_Ridge' in metric):
             self.te_func = TaskEmbedding_Entropy_RidgeHead()
         elif ('Relation' in metric):

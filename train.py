@@ -189,6 +189,8 @@ if __name__ == '__main__':
                             help='epsilon of label smoothing')
     parser.add_argument('--task-embedding', type=str, default='None',
                             help='choose which type of task embedding will be used')
+    parser.add_argument('--start-epoch', type=int, default=-1,
+                            help='choose when to use task embedding')
     parser.add_argument('--post-processing', type=str, default='None',
                             help='use an extra post processing net for sample embeddings')
 
@@ -293,10 +295,11 @@ if __name__ == '__main__':
 
             # print(emb_support.size(), emb_query.size())
 
-            emb_support, emb_query, G_support, G_query = add_te_func(
-                emb_support, emb_query, data_support, data_query,
-                labels_support, opt.train_way, opt.train_shot
-            )
+            if epoch > opt.start_epoch:
+                emb_support, emb_query, G_support, G_query = add_te_func(
+                    emb_support, emb_query, data_support, data_query,
+                    labels_support, opt.train_way, opt.train_shot
+                )
 
             emb_support = postprocessing_net(emb_support.reshape([-1] + list(emb_support.size()[2:])))
             emb_support = emb_support.reshape(opt.episodes_per_batch, train_n_support, -1)

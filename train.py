@@ -348,12 +348,13 @@ if __name__ == '__main__':
             emb_query = embedding_net(data_query.reshape([-1] + list(data_query.shape[-3:])))
             emb_query = emb_query.reshape(1, test_n_query, -1)
 
-            emb_support, emb_query, _, _ = add_te_func(
-                emb_support, emb_query, data_support, data_query,
-                labels_support, opt.test_way, opt.val_shot
-            )
-            # emb_query, _ = add_te_func(emb_query, emb_support)
-            # emb_support, _ = add_te_func(emb_support, emb_support)
+            if epoch >= opt.start_epoch:
+                emb_support, emb_query, _, _ = add_te_func(
+                    emb_support, emb_query, data_support, data_query,
+                    labels_support, opt.test_way, opt.val_shot
+                )
+                # emb_query, _ = add_te_func(emb_query, emb_support)
+                # emb_support, _ = add_te_func(emb_support, emb_support)
 
             emb_support = postprocessing_net(emb_support.reshape([-1] + list(emb_support.size()[2:])))
             emb_support = emb_support.reshape(1, test_n_support, -1)

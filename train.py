@@ -297,7 +297,7 @@ if __name__ == '__main__':
 
             # print(emb_support.size(), emb_query.size())
 
-            if epoch > opt.start_epoch:
+            if epoch >= opt.start_epoch:
                 emb_support, emb_query, G_support, G_query = add_te_func(
                     emb_support, emb_query, data_support, data_query,
                     labels_support, opt.train_way, opt.train_shot

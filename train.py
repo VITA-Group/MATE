@@ -281,6 +281,8 @@ if __name__ == '__main__':
 
         for i, batch in enumerate(tqdm(dloader_train(epoch)), 1):
             data_support, labels_support, data_query, labels_query, _, _ = [x.cuda() for x in batch]
+            # print(data_support.size())
+            # print(labels_support)
 
             train_n_support = opt.train_way * opt.train_shot
             train_n_query = opt.train_way * opt.train_query

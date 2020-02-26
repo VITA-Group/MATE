@@ -19,18 +19,18 @@ class BasicBlockFiLM(nn.Module):
 
     def __init__(self, inplanes, planes, stride=1, downsample=None,
                  drop_rate=0.0, drop_block=False, block_size=1,
-                 film_indim=1, film_alpha=1.0, film_act=F.leaky_relu):
-        super(BasicBlock, self).__init__()
+                 film_indim=1, film_alpha=1, film_act=F.leaky_relu):
+        super(BasicBlockFiLM, self).__init__()
         self.conv1 = conv3x3(inplanes, planes)
         self.bn1 = nn.BatchNorm2d(planes)
-        self.film1 = FiLM_Layer(planes, in_channel=film_indim, alpha=1, activation=film_act)
+        self.film1 = FiLM_Layer(planes, in_channels=film_indim, alpha=film_alpha, activation=film_act)
         self.relu = nn.LeakyReLU(0.1)
         self.conv2 = conv3x3(planes, planes)
         self.bn2 = nn.BatchNorm2d(planes)
-        self.film2 = FiLM_Layer(planes, in_channel=film_indim, alpha=1, activation=film_act)
+        self.film2 = FiLM_Layer(planes, in_channels=film_indim, alpha=film_alpha, activation=film_act)
         self.conv3 = conv3x3(planes, planes)
         self.bn3 = nn.BatchNorm2d(planes)
-        self.film3 = FiLM_Layer(planes, in_channel=film_indim, alpha=1, activation=film_act)
+        self.film3 = FiLM_Layer(planes, in_channels=film_indim, alpha=film_alpha, activation=film_act)
         self.maxpool = nn.MaxPool2d(stride)
         self.downsample = downsample
         self.stride = stride
@@ -81,22 +81,22 @@ class BasicBlockFiLM(nn.Module):
 class ResNet_FiLM(nn.Module):
 
     def __init__(self, block, keep_prob=1.0, avg_pool=False, drop_rate=0.0, dropblock_size=5,
-                 film_indim=1, film_alpha=1.0, film_act=F.leaky_relu):
+                 film_indim=1, film_alpha=1, film_act=F.leaky_relu):
         self.inplanes = 3
-        super(ResNet, self).__init__()
+        super(ResNet_FiLM, self).__init__()
 
         self.layer1 = self._make_layer(
             block, 64, stride=2, drop_rate=drop_rate,
-            film_indim=1, film_alpha=1.0, film_act=F.leaky_relu)
+            film_indim=film_indim, film_alpha=film_alpha, film_act=film_act)
         self.layer2 = self._make_layer(
             block, 160, stride=2, drop_rate=drop_rate,
-            film_indim=1, film_alpha=1.0, film_act=F.leaky_relu)
+            film_indim=film_indim, film_alpha=film_alpha, film_act=film_act)
         self.layer3 = self._make_layer(
             block, 320, stride=2, drop_rate=drop_rate, drop_block=True, block_size=dropblock_size,
-            film_indim=1, film_alpha=1.0, film_act=F.leaky_relu)
+            film_indim=film_indim, film_alpha=film_alpha, film_act=film_act)
         self.layer4 = self._make_layer(
             block, 640, stride=2, drop_rate=drop_rate, drop_block=True, block_size=dropblock_size,
-            film_indim=1, film_alpha=1.0, film_act=F.leaky_relu)
+            film_indim=film_indim, film_alpha=film_alpha, film_act=film_act)
         if avg_pool:
             self.avgpool = nn.AvgPool2d(5, stride=1)
         self.keep_prob = keep_prob
@@ -114,7 +114,7 @@ class ResNet_FiLM(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
     def _make_layer(self, block, planes, stride=1, drop_rate=0.0, drop_block=False, block_size=1,
-                    film_indim=1, film_alpha=1.0, film_act=F.leaky_relu):
+                    film_indim=1, film_alpha=1, film_act=F.leaky_relu):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
@@ -123,15 +123,17 @@ class ResNet_FiLM(nn.Module):
                 nn.BatchNorm2d(planes * block.expansion),
             )
 
-        layers = []
-        layers.append(
-            block(self.inplanes, planes, stride, downsample,
-                  drop_rate, drop_block, block_size,
-                  film_indim=1, film_alpha=1.0, film_act=F.leaky_relu)
-        )
+        # layers = []
+        # layers.append(block(self.inplanes, planes, stride, downsample,
+        #                     drop_rate, drop_block, block_size,
+        #                     film_indim, film_alpha, film_act))
+        layers = block(self.inplanes, planes, stride, downsample,
+                       drop_rate, drop_block, block_size,
+                       film_indim, film_alpha, film_act)
         self.inplanes = planes * block.expansion
 
-        return nn.Sequential(*layers)
+        # return nn.Sequential(*layers)
+        return layers
 
     def forward(self, x, task_embedding):
         x = self.layer1(x, task_embedding)
@@ -147,6 +149,6 @@ class ResNet_FiLM(nn.Module):
 def resnet12_film(keep_prob=1.0, avg_pool=False, **kwargs):
     """Constructs a ResNet-12 model.
     """
-    model = ResNet_FiLM(BasicBlock, keep_prob=keep_prob, avg_pool=avg_pool, **kwargs)
+    model = ResNet_FiLM(BasicBlockFiLM, keep_prob=keep_prob, avg_pool=avg_pool, **kwargs)
     return model
 

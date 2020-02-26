@@ -283,10 +283,9 @@ if __name__ == '__main__':
             emb_support = emb_support.reshape(opt.episodes_per_batch, train_n_support, -1)
 
             if epoch > opt.start_epoch:
+                assert('FiLM' in opt.task_embedding)
                 emb_task = add_te_func(
-                    emb_support, emb_query, data_support, data_query,
-                    labels_support, opt.train_way, opt.train_shot, ret_taskemb_only=True
-                )
+                    emb_support, labels_support, opt.train_way, opt.train_shot)
 
             # Forward pass for support samples with task embeddings
             emb_task_support_batch = emb_task.expand(-1, train_n_support, -1)
@@ -346,10 +345,9 @@ if __name__ == '__main__':
             # emb_query = emb_query.reshape(1, test_n_query, -1)
 
             if epoch > opt.start_epoch:
+                assert('FiLM' in opt.task_embedding)
                 emb_task = add_te_func(
-                    emb_support, emb_query, data_support, data_query,
-                    labels_support, opt.test_way, opt.val_shot, ret_taskemb_only=True
-                )
+                    emb_support, labels_support, opt.test_way, opt.val_shot)
 
             # Forward pass for support samples with task embeddings
             emb_task_support_batch = emb_task.expand(-1, test_n_support, -1)

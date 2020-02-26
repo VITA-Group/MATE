@@ -17,9 +17,9 @@ class FiLM_Layer(nn.Module):
         self.channels = channels
         self.activation = activation
         self.MLP = nn.Sequential(
-            nn.Linear(in_channels, alpha*channels*2, bias=True),
+            nn.Linear(int(in_channels), int(alpha*channels*2), bias=True),
             nn.LeakyReLU(inplace=True),
-            nn.Linear(alpha*channels*2, channels*2, bias=True),
+            nn.Linear(int(alpha*channels*2), int(channels*2), bias=True),
         )
 
     def forward(self, _input, _lambda):

@@ -78,7 +78,7 @@ class TaskEmbedding_Cat_SVM_WGrad(nn.Module):
         self.cls_head = ClassificationHead(base_learner='SVM-CS-WNorm')
 
     def forward(self, emb_support, emb_query, data_support, data_query,
-                labels_support, train_way, train_shot):
+                labels_support, train_way, train_shot, ret_taskemb_only=False):
         n_episode, n_support, d = emb_support.size()
         # Train the SVM head
         logit_support, wnorm = self.cls_head(emb_support, emb_support, labels_support, train_way, train_shot)
@@ -94,34 +94,13 @@ class TaskEmbedding_Cat_SVM_WGrad(nn.Module):
         # Compute task features
         emb_task = (emb_support * G).sum(dim=1, keepdim=True) # (tasks_per_batch, 1, d)
 
-        augmented_support = torch.cat([emb_support, emb_task.expand_as(emb_support)], dim=-1)
-        augmented_query = torch.cat([emb_query, emb_task.expand_as(emb_query)], dim=-1)
-        # NOTE: `None` in the return statement is preserved for G
-        return augmented_support, augmented_query, None, None
-
-
-class TaskEmbedding_FiLM_SVM_WGrad(nn.Module):
-    def __init__(self):
-        super(TaskEmbedding_FiLM_SVM_WGrad, self).__init__()
-        self.cls_head = ClassificationHead(base_learner='SVM-CS-WNorm')
-
-    def forward(self, emb_support, labels_support, train_way, train_shot):
-        n_episode, n_support, d = emb_support.size()
-        # Train the SVM head
-        logit_support, wnorm = self.cls_head(emb_support, emb_support, labels_support, train_way, train_shot)
-
-        # Compute the gradient of `wnorm` w.r.t. `emb_support`
-        wgrad = computeGradientPenalty(wnorm, emb_support) # (tasks_per_batch, n_support, d)
-        wgrad_abs = wgrad.abs()
-        # Normalize gradient
-        with torch.no_grad():
-            wgrad_abs_sum = torch.sum(wgrad_abs, dim=(1,2), keepdim=True)
-        G = wgrad_abs / wgrad_abs_sum * d
-
-        # Compute task features
-        emb_task = (emb_support * G).sum(dim=1, keepdim=True) # (tasks_per_batch, 1, d)
-
-        return emb_task
+        if ret_taskemb_only:
+            return emb_task
+        else:
+            augmented_support = torch.cat([emb_support, emb_task.expand_as(emb_support)], dim=-1)
+            augmented_query = torch.cat([emb_query, emb_task.expand_as(emb_query)], dim=-1)
+            # NOTE: `None` in the return statement is preserved for G
+            return augmented_support, augmented_query, None, None
 
 
 class TaskEmbedding_Entropy_RidgeHead(nn.Module):
@@ -184,8 +163,6 @@ class TaskEmbedding(nn.Module):
             self.te_func = TaskEmbedding_Entropy_SVMHead()
         elif ('Cat_SVM_WGrad' in metric):
             self.te_func = TaskEmbedding_Cat_SVM_WGrad()
-        elif ('FiLM_SVM_WGrad' in metric):
-            self.te_func = TaskEmbedding_FiLM_SVM_WGrad()
         elif ('Entropy_Ridge' in metric):
             self.te_func = TaskEmbedding_Entropy_RidgeHead()
         elif ('Relation' in metric):
@@ -196,5 +173,8 @@ class TaskEmbedding(nn.Module):
             print ("Cannot recognize the metric type {}".format(metric))
             assert(False)
 
-    def forward(self, *args):
-        return self.te_func(*args)
+    def forward(self, emb_support, emb_query, data_support, data_query,
+                labels_support, train_way, train_shot):
+        return self.te_func(
+            emb_support, emb_query, data_support, data_query,
+            labels_support, train_way, train_shot)

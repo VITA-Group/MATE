@@ -288,19 +288,31 @@ if __name__ == '__main__':
                     emb_support, labels_support, opt.train_way, opt.train_shot)
 
             # Forward pass for support samples with task embeddings
-            emb_task_support_batch = emb_task.expand(-1, train_n_support, -1)
-            emb_support = embedding_net(
-                data_support.reshape([-1] + list(data_support.shape[-3:])),
-                task_embedding=emb_task_support_batch.reshape(-1, emb_task.size(-1))
-            )
+            if emb_task is not None:
+                emb_task_support_batch = emb_task.expand(-1, train_n_support, -1)
+                emb_support = embedding_net(
+                    data_support.reshape([-1] + list(data_support.shape[-3:])),
+                    task_embedding=emb_task_support_batch.reshape(-1, emb_task.size(-1))
+                )
+            else:
+                emb_support = embedding_net(
+                    data_support.reshape([-1] + list(data_support.shape[-3:])),
+                    task_embedding=None
+                )
             # emb_support = postprocessing_net(emb_support.reshape([-1] + list(emb_support.size()[2:])))
             emb_support = emb_support.reshape(opt.episodes_per_batch, train_n_support, -1)
             # Forward pass for query samples with task embeddings
-            emb_task_query_batch = emb_task.expand(-1, train_n_query, -1)
-            emb_query = embedding_net(
-                data_query.reshape([-1] + list(data_query.shape[-3:])),
-                task_embedding=emb_task_query_batch.reshape(-1, emb_task.size(-1))
-            )
+            if emb_task is not None:
+                emb_task_query_batch = emb_task.expand(-1, train_n_query, -1)
+                emb_query = embedding_net(
+                    data_query.reshape([-1] + list(data_query.shape[-3:])),
+                    task_embedding=emb_task_query_batch.reshape(-1, emb_task.size(-1))
+                )
+            else:
+                emb_query = embedding_net(
+                    data_query.reshape([-1] + list(data_query.shape[-3:])),
+                    task_embedding=None
+                )
             # emb_query = postprocessing_net(emb_query.reshape([-1] + list(emb_query.size()[2:])))
             emb_query = emb_query.reshape(opt.episodes_per_batch, train_n_query, -1)
 
@@ -350,19 +362,32 @@ if __name__ == '__main__':
                     emb_support, labels_support, opt.test_way, opt.val_shot)
 
             # Forward pass for support samples with task embeddings
-            emb_task_support_batch = emb_task.expand(-1, test_n_support, -1)
-            emb_support = embedding_net(
-                data_support.reshape([-1] + list(data_support.shape[-3:])),
-                task_embedding=emb_task_support_batch.reshape(-1, emb_task.size(-1))
-            )
+            if emb_task is not None:
+                emb_task_support_batch = emb_task.expand(-1, test_n_support, -1)
+                emb_support = embedding_net(
+                    data_support.reshape([-1] + list(data_support.shape[-3:])),
+                    task_embedding=emb_task_support_batch.reshape(-1, emb_task.size(-1))
+                )
+            else:
+                emb_support = embedding_net(
+                    data_support.reshape([-1] + list(data_support.shape[-3:])),
+                    task_embedding=None
+                )
             # emb_support = postprocessing_net(emb_support.reshape([-1] + list(emb_support.size()[2:])))
             emb_support = emb_support.reshape(opt.episodes_per_batch, test_n_support, -1)
+
             # Forward pass for query samples with task embeddings
-            emb_task_query_batch = emb_task.expand(-1, test_n_query, -1)
-            emb_query = embedding_net(
-                data_query.reshape([-1] + list(data_query.shape[-3:])),
-                task_embedding=emb_task_query_batch.reshape(-1, emb_task.size(-1))
-            )
+            if emb_task is not None:
+                emb_task_query_batch = emb_task.expand(-1, test_n_query, -1)
+                emb_query = embedding_net(
+                    data_query.reshape([-1] + list(data_query.shape[-3:])),
+                    task_embedding=emb_task_query_batch.reshape(-1, emb_task.size(-1))
+                )
+            else:
+                emb_query = embedding_net(
+                    data_query.reshape([-1] + list(data_query.shape[-3:])),
+                    task_embedding=None
+                )
             # emb_query = postprocessing_net(emb_query.reshape([-1] + list(emb_query.size()[2:])))
             emb_query = emb_query.reshape(opt.episodes_per_batch, test_n_query, -1)
 

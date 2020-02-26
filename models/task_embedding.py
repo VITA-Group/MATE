@@ -30,6 +30,10 @@ def TaskEmbedding_KME(emb_support, emb_query, *args):
     # NOTE: `None` in the return statement is preserved for G
     return augmented_support, augmented_query, None, None
 
+def TaskEmbedding_FiLM_KME(emb_support):
+    emb_task = emb_support.mean(dim=1, keepdim=True)
+    return emb_task
+
 
 def TaskEmbedding_Cosine(emb_support, emb_query, *args):
     n_support = emb_support.size()[1]
@@ -70,6 +74,25 @@ class TaskEmbedding_Entropy_SVMHead(nn.Module):
         augmented_query = torch.cat([emb_query, emb_task.expand_as(emb_query)], dim=-1)
         # NOTE: `None` in the return statement is preserved for G
         return augmented_support, augmented_query, entropy, entropy
+
+
+class TaskEmbedding_FiLM_Entropy_SVM(nn.Module):
+    def __init__(self):
+        super(TaskEmbedding_FiLM_Entropy_SVM, self).__init__()
+        self.cls_head = ClassificationHead(base_learner='SVM-CS')
+
+    def forward(self, emb_support, labels_support, train_way, train_shot):
+        n_episode, n_support = emb_support.size()[:2]
+        logit_support = self.cls_head(emb_support, emb_support, labels_support, train_way, train_shot)
+        logit_support_rsp = logit_support.reshape(n_episode * n_support, train_way)
+        prb = F.softmax(logit_support_rsp, dim=1)
+        log_prb = F.log_softmax(logit_support_rsp, dim=1)
+        entropy = - (prb * log_prb).sum(dim=1).reshape(n_episode, n_support, 1)
+        G = np.log(train_way) - entropy
+        # normalize G
+        G = G / G.sum(dim=1,keepdim=True)
+        emb_task = (emb_support * G).mean(dim=1, keepdim=True)
+        return emb_task
 
 
 class TaskEmbedding_Cat_SVM_WGrad(nn.Module):
@@ -176,12 +199,16 @@ class TaskEmbedding(nn.Module):
         super(TaskEmbedding, self).__init__()
         if ('KME' in metric):
             self.te_func = TaskEmbedding_KME
+        if ('FiLM_KME' in metric):
+            self.te_func = TaskEmbedding_FiLM_KME
         elif ('Cosine' in metric):
             self.te_func = TaskEmbedding_Cosine
         elif ('Entropy_SVM_NoGrad' in metric):
             self.te_func = TaskEmbedding_Entropy_SVMHead_NoGrad()
         elif ('Entropy_SVM' in metric):
             self.te_func = TaskEmbedding_Entropy_SVMHead()
+        elif ('FiLM_Entropy_SVM' in metric):
+            self.te_func = TaskEmbedding_FiLM_Entropy_SVM()
         elif ('Cat_SVM_WGrad' in metric):
             self.te_func = TaskEmbedding_Cat_SVM_WGrad()
         elif ('FiLM_SVM_WGrad' in metric):

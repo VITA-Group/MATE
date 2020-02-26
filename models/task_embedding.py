@@ -30,7 +30,7 @@ def TaskEmbedding_KME(emb_support, emb_query, *args):
     # NOTE: `None` in the return statement is preserved for G
     return augmented_support, augmented_query, None, None
 
-def TaskEmbedding_FiLM_KME(emb_support):
+def TaskEmbedding_FiLM_KME(emb_support, *args):
     emb_task = emb_support.mean(dim=1, keepdim=True)
     return emb_task
 

@@ -86,22 +86,26 @@ def get_dataset(options):
 
 def get_task_embedding_func(options):
     # Choose the task embedding function
-    if options.task_embedding == 'KME':
-        te_func = TaskEmbedding(metric='KME').cuda()
-    elif options.task_embedding == 'Cosine':
-        te_func = TaskEmbedding(metric='Cosine').cuda()
-    elif options.task_embedding == 'Entropy_SVM_NoGrad':
-        te_func = TaskEmbedding(metric='Entropy_SVM_NoGrad').cuda()
-    elif options.task_embedding == 'Entropy_SVM':
-        te_func = TaskEmbedding(metric='Entropy_SVM').cuda()
-    elif options.task_embedding == 'Entropy_Ridge':
-        te_func = TaskEmbedding(metric='Entropy_Ridge').cuda()
-    elif options.task_embedding == 'Relation':
-        te_func = TaskEmbedding(metric='Relation', dataset=opt.dataset).cuda()
-    elif options.task_embedding == 'None':
-        te_func = TaskEmbedding(metric='None').cuda()
-    else:
-        raise ValueError('Cannot recognize the task embedding type `{}`'.format(options.task_embedding))
+    te_args = dict(dataset=options.dataset) if options.task_embedding == 'Relation' else dict()
+    te_func = TaskEmbedding(metric=options.task_embedding, **te_args).cuda()
+    # if options.task_embedding == 'KME':
+    #     te_func = TaskEmbedding(metric='KME').cuda()
+    # elif options.task_embedding == 'Cosine':
+    #     te_func = TaskEmbedding(metric='Cosine').cuda()
+    # elif options.task_embedding == 'Entropy_SVM_NoGrad':
+    #     te_func = TaskEmbedding(metric='Entropy_SVM_NoGrad').cuda()
+    # elif options.task_embedding == 'Entropy_SVM':
+    #     te_func = TaskEmbedding(metric='Entropy_SVM').cuda()
+    # elif options.task_embedding == 'Cat_SVM_WGrad':
+    #     te_func = TaskEmbedding(metric='Cat_SVM_WGrad').cuda()
+    # elif options.task_embedding == 'Entropy_Ridge':
+    #     te_func = TaskEmbedding(metric='Entropy_Ridge').cuda()
+    # elif options.task_embedding == 'Relation':
+    #     te_func = TaskEmbedding(metric='Relation', dataset=options.dataset).cuda()
+    # elif options.task_embedding == 'None':
+    #     te_func = TaskEmbedding(metric='None').cuda()
+    # else:
+    #     raise ValueError('Cannot recognize the task embedding type `{}`'.format(options.task_embedding))
 
     device_ids = list(range(len(options.gpu.split(','))))
     te_func = torch.nn.DataParallel(te_func, device_ids=device_ids)
@@ -200,6 +204,7 @@ if __name__ == '__main__':
     test_accuracies = []
     for i, batch in enumerate(tqdm(dloader_test()), 1):
         data_support, labels_support, data_query, labels_query, _, _ = [x.cuda() for x in batch]
+        # print(labels_support)
 
         n_support = opt.way * opt.shot
         n_query = opt.way * opt.query

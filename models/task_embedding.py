@@ -78,7 +78,7 @@ class TaskEmbedding_Cat_SVM_WGrad(nn.Module):
         self.cls_head = ClassificationHead(base_learner='SVM-CS-WNorm')
 
     def forward(self, emb_support, emb_query, data_support, data_query,
-                labels_support, train_way, train_shot):
+                labels_support, train_way, train_shot, ret_taskemb_only=False):
         n_episode, n_support, d = emb_support.size()
         # Train the SVM head
         logit_support, wnorm = self.cls_head(emb_support, emb_support, labels_support, train_way, train_shot)
@@ -94,10 +94,13 @@ class TaskEmbedding_Cat_SVM_WGrad(nn.Module):
         # Compute task features
         emb_task = (emb_support * G).sum(dim=1, keepdim=True) # (tasks_per_batch, 1, d)
 
-        augmented_support = torch.cat([emb_support, emb_task.expand_as(emb_support)], dim=-1)
-        augmented_query = torch.cat([emb_query, emb_task.expand_as(emb_query)], dim=-1)
-        # NOTE: `None` in the return statement is preserved for G
-        return augmented_support, augmented_query, None, None
+        if ret_taskemb_only:
+            return emb_task
+        else:
+            augmented_support = torch.cat([emb_support, emb_task.expand_as(emb_support)], dim=-1)
+            augmented_query = torch.cat([emb_query, emb_task.expand_as(emb_query)], dim=-1)
+            # NOTE: `None` in the return statement is preserved for G
+            return augmented_support, augmented_query, None, None
 
 
 class TaskEmbedding_Entropy_RidgeHead(nn.Module):

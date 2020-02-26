@@ -283,6 +283,8 @@ if __name__ == '__main__':
 
         for i, batch in enumerate(tqdm(dloader_train(epoch)), 1):
             data_support, labels_support, data_query, labels_query, _, _ = [x.cuda() for x in batch]
+            # print(data_support.size())
+            # print(labels_support)
 
             train_n_support = opt.train_way * opt.train_shot
             train_n_query = opt.train_way * opt.train_query
@@ -295,7 +297,7 @@ if __name__ == '__main__':
 
             # print(emb_support.size(), emb_query.size())
 
-            if epoch > opt.start_epoch:
+            if epoch >= opt.start_epoch:
                 emb_support, emb_query, G_support, G_query = add_te_func(
                     emb_support, emb_query, data_support, data_query,
                     labels_support, opt.train_way, opt.train_shot
@@ -346,12 +348,13 @@ if __name__ == '__main__':
             emb_query = embedding_net(data_query.reshape([-1] + list(data_query.shape[-3:])))
             emb_query = emb_query.reshape(1, test_n_query, -1)
 
-            emb_support, emb_query, _, _ = add_te_func(
-                emb_support, emb_query, data_support, data_query,
-                labels_support, opt.test_way, opt.val_shot
-            )
-            # emb_query, _ = add_te_func(emb_query, emb_support)
-            # emb_support, _ = add_te_func(emb_support, emb_support)
+            if epoch >= opt.start_epoch:
+                emb_support, emb_query, _, _ = add_te_func(
+                    emb_support, emb_query, data_support, data_query,
+                    labels_support, opt.test_way, opt.val_shot
+                )
+                # emb_query, _ = add_te_func(emb_query, emb_support)
+                # emb_support, _ = add_te_func(emb_support, emb_support)
 
             emb_support = postprocessing_net(emb_support.reshape([-1] + list(emb_support.size()[2:])))
             emb_support = emb_support.reshape(1, test_n_support, -1)
@@ -397,7 +400,7 @@ if __name__ == '__main__':
                     'optimizer': optimizer.state_dict()},
                    os.path.join(opt.save_path, 'last_epoch.pth'))
 
-        if epoch % opt.save_epoch == 0 or epoch == 21:
+        if epoch % opt.save_epoch == 0 or epoch in [21,22,23,24]:
             torch.save({'epoch': epoch,
                         'embedding': embedding_net.state_dict(),
                         'head': cls_head.state_dict(),

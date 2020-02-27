@@ -16,6 +16,8 @@ class FiLM_Layer(nn.Module):
         super(FiLM_Layer, self).__init__()
         self.channels = channels
         self.activation = activation
+        self.mu_multiplier = nn.Parameter(torch.zeros(1).float())
+        self.sigma_multiplier = nn.Parameter(torch.zeros(1).float())
         self.MLP = nn.Sequential(
             nn.Linear(int(in_channels), int(alpha*channels*2), bias=True),
             nn.LeakyReLU(inplace=True),
@@ -29,10 +31,11 @@ class FiLM_Layer(nn.Module):
             mu, sigma = torch.split(out, [self.channels, self.channels], dim=-1)
             if self.activation is not None:
                 mu, sigma = self.activation(mu), self.activation(sigma)
-            mu = mu.view(N, C, 1, 1).expand_as(_input)
-            sigma = sigma.view(N, C, 1, 1).expand_as(_input)
+            mu = mu.view(N, C, 1, 1).expand_as(_input) * self.mu_multiplier
+            sigma = sigma.view(N, C, 1, 1).expand_as(_input) * self.sigma_multiplier
+
         else:
             mu, sigma = torch.ones_like(_input), torch.zeros_like(_input)
 
-        return _input * mu + sigma
+        return _input * (1.0 + mu) + sigma
 

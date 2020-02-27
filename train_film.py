@@ -286,6 +286,8 @@ if __name__ == '__main__':
                 assert('FiLM' in opt.task_embedding)
                 emb_task = add_te_func(
                     emb_support, labels_support, opt.train_way, opt.train_shot)
+            else:
+                emb_task = None
 
             # Forward pass for support samples with task embeddings
             if emb_task is not None:
@@ -361,6 +363,8 @@ if __name__ == '__main__':
                 assert('FiLM' in opt.task_embedding)
                 emb_task = add_te_func(
                     emb_support, labels_support, opt.test_way, opt.val_shot)
+            else:
+                emb_task = None
 
             # Forward pass for support samples with task embeddings
             if emb_task is not None:

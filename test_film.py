@@ -234,6 +234,7 @@ if __name__ == '__main__':
         assert('FiLM' in opt.task_embedding)
         emb_task = add_te_func(
             emb_support, labels_support, opt.way, opt.shot)
+        # print(emb_task * 10**5)
 
         # Forward pass for support samples with task embeddings
         if emb_task is not None:

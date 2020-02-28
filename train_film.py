@@ -54,11 +54,13 @@ def get_model(options):
         if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=5,
-                film_indim=1, film_alpha=1.0, film_act=F.leaky_relu).cuda()
+                film_indim=1, film_alpha=1.0, film_act=F.leaky_relu,
+                dual_BN=options.dual_BN).cuda()
         else:
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=2,
-                film_indim=2560, film_alpha=1.0, film_act=F.leaky_relu).cuda()
+                film_indim=2560, film_alpha=1.0, film_act=F.leaky_relu,
+                dual_BN=options.dual_BN).cuda()
         device_ids = list(range(len(options.gpu.split(','))))
         network = torch.nn.DataParallel(network, device_ids=device_ids)
     else:
@@ -184,6 +186,8 @@ if __name__ == '__main__':
                             help='choose when to use task embedding')
     parser.add_argument('--post-processing', type=str, default='None',
                             help='use an extra post processing net for sample embeddings')
+    parser.add_argument('--dual-BN', action='store_true',
+                            help='Use dual BN together with FiLM layers')
 
     opt = parser.parse_args()
 

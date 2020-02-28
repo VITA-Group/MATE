@@ -269,8 +269,8 @@ if __name__ == '__main__':
         # emb_query = postprocessing_net(emb_query)
 
         if opt.head == 'SVM':
-            # logits = cls_head(emb_query, emb_support, labels_support, opt.way, opt.shot, maxIter=3)
-            logits = cls_head(emb_query, emb_support, labels_support, opt.way, opt.shot)
+            logits = cls_head(emb_query, emb_support, labels_support, opt.way, opt.shot, maxIter=3)
+            # logits = cls_head(emb_query, emb_support, labels_support, opt.way, opt.shot)
         else:
             logits = cls_head(emb_query, emb_support, labels_support, opt.way, opt.shot)
 

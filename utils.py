@@ -15,10 +15,18 @@ def check_dir(path):
     if not os.path.exists(path):
         os.mkdir(path)
 
-def count_accuracy(logits, label):
+def count_accuracies(logits, labels):
+    # `logits` of shape (episodes_per_batch, n_query, n_ways)
+    # `labels` of shape (episodes_per_batch, n_query)
+    pred = torch.argmax(logits, dim=2)
+    # labels = labels.view(-1)
+    accuracies = 100 * pred.eq(labels).float().mean(dim=1)
+    return accuracies
+
+def count_accuracy(logits, labels):
     pred = torch.argmax(logits, dim=1).view(-1)
-    label = label.view(-1)
-    accuracy = 100 * pred.eq(label).float().mean()
+    labels = labels.view(-1)
+    accuracy = 100 * pred.eq(labels).float().mean()
     return accuracy
 
 class Timer():

@@ -18,7 +18,7 @@ from models.ResNet12_FiLM_embedding import resnet12_film
 from models.task_embedding import TaskEmbedding
 from models.postprocessing import Identity, PostProcessingNet, PostProcessingNetConv1d, PostProcessingNetConv1d_SelfAttn
 
-from utils import set_gpu, Timer, count_accuracy, check_dir, log
+from utils import set_gpu, Timer, count_accuracy, count_accuracies, check_dir, log
 
 def one_hot(indices, depth):
     """
@@ -178,6 +178,8 @@ if __name__ == '__main__':
                             help='choose which classification head to use. miniImageNet, tieredImageNet, CIFAR_FS, FC100')
     parser.add_argument('--episodes-per-batch', type=int, default=8,
                             help='number of episodes per batch')
+    parser.add_argument('--val-episodes-per-batch', type=int, default=20,
+                            help='number of episodes per batch')
     parser.add_argument('--eps', type=float, default=0.0,
                             help='epsilon of label smoothing')
     parser.add_argument('--task-embedding', type=str, default='None',
@@ -213,7 +215,8 @@ if __name__ == '__main__':
         nExemplars=opt.val_shot, # num training examples per novel category
         nTestNovel=opt.val_query * opt.test_way, # num test examples for all the novel categories
         nTestBase=0, # num test examples for all the base categories
-        batch_size=1,
+        # batch_size=1,
+        batch_size=opt.val_episodes_per_batch,
         num_workers=0,
         epoch_size=1 * opt.val_episode, # num of batches per epoch
     )
@@ -359,7 +362,8 @@ if __name__ == '__main__':
             test_n_query = opt.test_way * opt.val_query
 
             emb_support = embedding_net(data_support.reshape([-1] + list(data_support.shape[-3:])), None)
-            emb_support = emb_support.reshape(1, test_n_support, -1)
+            # emb_support = emb_support.reshape(1, test_n_support, -1)
+            emb_support = emb_support.reshape(opt.val_episodes_per_batch, test_n_support, -1)
             # emb_query = embedding_net(data_query.reshape([-1] + list(data_query.shape[-3:])))
             # emb_query = emb_query.reshape(1, test_n_query, -1)
 
@@ -372,7 +376,7 @@ if __name__ == '__main__':
 
             # Forward pass for support samples with task embeddings
             if emb_task is not None:
-                emb_task_support_batch = emb_task.expand(1, test_n_support, -1)
+                emb_task_support_batch = emb_task.expand(-1, test_n_support, -1)
                 emb_support = embedding_net(
                     data_support.reshape([-1] + list(data_support.shape[-3:])),
                     task_embedding=emb_task_support_batch.reshape(-1, emb_task.size(-1))
@@ -383,7 +387,7 @@ if __name__ == '__main__':
                     task_embedding=None
                 )
             # emb_support = postprocessing_net(emb_support.reshape([-1] + list(emb_support.size()[2:])))
-            emb_support = emb_support.reshape(1, test_n_support, -1)
+            emb_support = emb_support.reshape(opt.val_episodes_per_batch, test_n_support, -1)
 
             # Forward pass for query samples with task embeddings
             if emb_task is not None:
@@ -398,7 +402,7 @@ if __name__ == '__main__':
                     task_embedding=None
                 )
             # emb_query = postprocessing_net(emb_query.reshape([-1] + list(emb_query.size()[2:])))
-            emb_query = emb_query.reshape(1, test_n_query, -1)
+            emb_query = emb_query.reshape(opt.val_episodes_per_batch, test_n_query, -1)
 
             # emb_support = postprocessing_net(emb_support)
             # emb_query = postprocessing_net(emb_query)
@@ -406,9 +410,11 @@ if __name__ == '__main__':
             logit_query = cls_head(emb_query, emb_support, labels_support, opt.test_way, opt.val_shot)
 
             loss = x_entropy(logit_query.reshape(-1, opt.test_way), labels_query.reshape(-1))
-            acc = count_accuracy(logit_query.reshape(-1, opt.test_way), labels_query.reshape(-1))
+            # acc = count_accuracy(logit_query.reshape(-1, opt.test_way), labels_query.reshape(-1))
+            accs = count_accuracies(logit_query, labels_query)
 
-            val_accuracies.append(acc.item())
+            val_accuracies += accs.detach().cpu().tolist()
+            # val_accuracies.append(acc.item())
             val_losses.append(loss.item())
 
         val_acc_avg = np.mean(np.array(val_accuracies))

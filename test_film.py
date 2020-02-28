@@ -173,6 +173,8 @@ if __name__ == '__main__':
                             help='choose which type of task embedding will be used')
     parser.add_argument('--post-processing', type=str, default='None',
                             help='use an extra post processing net for sample embeddings')
+    parser.add_argument('--dual-BN', action='store_true',
+                            help='Use dual BN together with FiLM layers')
 
     opt = parser.parse_args()
     (dataset_test, data_loader) = get_dataset(opt)

@@ -190,6 +190,10 @@ if __name__ == '__main__':
                             help='use an extra post processing net for sample embeddings')
     parser.add_argument('--dual-BN', action='store_true',
                             help='Use dual BN together with FiLM layers')
+    parser.add_argument('--orthogonal-reg', type=float, default=0.0,
+                            help='Regularization term of orthogonality between task representations')
+    parser.add_argument('--wgrad-l1-reg', type=float, default=0.0,
+                            help='Regularization term of l1 norm of WGrad')
 
     opt = parser.parse_args()
 
@@ -291,10 +295,23 @@ if __name__ == '__main__':
 
             if epoch > opt.start_epoch:
                 assert('FiLM' in opt.task_embedding)
-                emb_task = add_te_func(
+                emb_task, G = add_te_func(
                     emb_support, labels_support, opt.train_way, opt.train_shot)
             else:
-                emb_task = None
+                emb_task, G = None, None
+
+            if opt.orthogonal_reg > 0 and emb_task is not None:
+                mask = 1.0 - torch.eye(emb_task.size(0)).float().cuda()
+                emb_task_temp = emb_task.squeeze(1)
+                gram = torch.matmul(emb_task_temp, emb_task_temp.t())
+                loss_ortho_reg = ((gram * mask) ** 2.0).sum()
+            else:
+                loss_ortho_reg = 0.0
+
+            if opt.wgrad_l1_reg > 0 and G is not None:
+                loss_wgrad_l1_reg = G.sum()
+            else:
+                loss_wgrad_l1_reg = 0.0
 
             # Forward pass for support samples with task embeddings
             if emb_task is not None:
@@ -334,6 +351,7 @@ if __name__ == '__main__':
             log_prb = F.log_softmax(logit_query.reshape(-1, opt.train_way), dim=1)
             loss = -(smoothed_one_hot * log_prb).sum(dim=1)
             loss = loss.mean()
+            loss += opt.orthogonal_reg * loss_ortho_reg + opt.wgrad_l1_reg * loss_wgrad_l1_reg
 
             acc = count_accuracy(logit_query.reshape(-1, opt.train_way), labels_query.reshape(-1))
 
@@ -369,10 +387,10 @@ if __name__ == '__main__':
 
             if epoch > opt.start_epoch:
                 assert('FiLM' in opt.task_embedding)
-                emb_task = add_te_func(
+                emb_task, G = add_te_func(
                     emb_support, labels_support, opt.test_way, opt.val_shot)
             else:
-                emb_task = None
+                emb_task, G = None, None
 
             # Forward pass for support samples with task embeddings
             if emb_task is not None:

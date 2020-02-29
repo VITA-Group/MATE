@@ -232,7 +232,7 @@ if __name__ == '__main__':
         # emb_query = emb_query.reshape(1, n_query, -1)
 
         assert('FiLM' in opt.task_embedding)
-        emb_task = add_te_func(
+        emb_task, _ = add_te_func(
             emb_support, labels_support, opt.way, opt.shot)
         # print(emb_task * 10**5)
 

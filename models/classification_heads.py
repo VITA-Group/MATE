@@ -782,6 +782,12 @@ def MetaOptNetHead_SVM_CS_WNorm(query, support, support_labels, n_way, n_shot, C
     else:
         G, e, C, h, A, b = [x.float().cuda() for x in [G, e, C, h, A, b]]
 
+    # e, _ = torch.eig(G[0])
+    # print(e)
+    # for i in range(tasks_per_batch):
+    #     e, _ = torch.eig(G[i])
+    #     if not torch.all(e[:,0] > 0):
+    #         print(e)
     # Solve the following QP to fit SVM:
     #        \hat z =   argmin_z 1/2 z^T G z + e^T z
     #                 subject to Cz <= h

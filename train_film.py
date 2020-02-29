@@ -295,10 +295,10 @@ if __name__ == '__main__':
 
             if epoch > opt.start_epoch:
                 assert('FiLM' in opt.task_embedding)
-                emb_task, G = add_te_func(
+                emb_task, _ = add_te_func(
                     emb_support, labels_support, opt.train_way, opt.train_shot)
             else:
-                emb_task, G = None, None
+                emb_task, _ = None, None
 
             if opt.orthogonal_reg > 0 and emb_task is not None:
                 mask = 1.0 - torch.eye(emb_task.size(0)).float().cuda()
@@ -307,11 +307,12 @@ if __name__ == '__main__':
                 loss_ortho_reg = ((gram * mask) ** 2.0).sum()
             else:
                 loss_ortho_reg = 0.0
+            # loss_ortho_reg = 0.0
 
-            if opt.wgrad_l1_reg > 0 and G is not None:
-                loss_wgrad_l1_reg = G.sum()
-            else:
-                loss_wgrad_l1_reg = 0.0
+            # if opt.wgrad_l1_reg > 0 and G is not None:
+            #     loss_wgrad_l1_reg = G.sum()
+            # else:
+            #     loss_wgrad_l1_reg = 0.0
 
             # Forward pass for support samples with task embeddings
             if emb_task is not None:
@@ -351,7 +352,8 @@ if __name__ == '__main__':
             log_prb = F.log_softmax(logit_query.reshape(-1, opt.train_way), dim=1)
             loss = -(smoothed_one_hot * log_prb).sum(dim=1)
             loss = loss.mean()
-            loss += opt.orthogonal_reg * loss_ortho_reg + opt.wgrad_l1_reg * loss_wgrad_l1_reg
+            loss += opt.orthogonal_reg * loss_ortho_reg
+            # loss += opt.orthogonal_reg * loss_ortho_reg + opt.wgrad_l1_reg * loss_wgrad_l1_reg
 
             acc = count_accuracy(logit_query.reshape(-1, opt.train_way), labels_query.reshape(-1))
 

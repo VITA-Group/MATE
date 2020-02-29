@@ -33,7 +33,7 @@ def TaskEmbedding_KME(emb_support, emb_query, *args):
 
 def TaskEmbedding_FiLM_KME(emb_support, *args):
     emb_task = emb_support.mean(dim=1, keepdim=True)
-    return emb_task
+    return emb_task, None
 
 
 def TaskEmbedding_Cosine(emb_support, emb_query, *args):

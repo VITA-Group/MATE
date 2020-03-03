@@ -42,8 +42,8 @@ class FiLM_Layer(nn.Module):
             # print(self.mu_multiplier, self.sigma_multiplier)
 
         else:
-            mu, sigma = torch.ones_like(_input), torch.zeros_like(_input)
+            mu, sigma = torch.zeros_like(_input), torch.zeros_like(_input)
 
-        return _input * mu + sigma
+        return _input * (1.0 + mu) + sigma
         # return _input * (1.0 + mu) + sigma
 

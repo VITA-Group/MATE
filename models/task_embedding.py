@@ -141,6 +141,8 @@ class TaskEmbedding_FiLM_SVM_WGrad(nn.Module):
         with torch.no_grad():
             wgrad_abs_sum = torch.sum(wgrad_abs, dim=(1,2), keepdim=True)
         G = wgrad_abs / wgrad_abs_sum * d
+        # print(labels_support)
+        # print(G)
 
         # Compute task features
         emb_task = (emb_support * G).sum(dim=1, keepdim=True) # (tasks_per_batch, 1, d)

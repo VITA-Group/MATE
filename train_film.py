@@ -54,7 +54,7 @@ def get_model(options):
         if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=5,
-                film_indim=1, film_alpha=1.0, film_act=F.leaky_relu,
+                film_indim=2560, film_alpha=1.0, film_act=F.leaky_relu,
                 dual_BN=options.dual_BN).cuda()
         else:
             network = resnet12_film(
@@ -237,6 +237,8 @@ if __name__ == '__main__':
     (embedding_net, cls_head) = get_model(opt)
     add_te_func = get_task_embedding_func(opt)
     postprocessing_net = get_postprocessing_model(opt)
+    if 'imagenet' in opt.dataset.lower() and 'film' in opt.task_embedding.lower():
+        film_preprocess = nn.Linear(16000, 2560, False).cuda()
 
     optimizer = torch.optim.SGD([{'params': embedding_net.parameters()},
                                  {'params': cls_head.parameters()},
@@ -281,12 +283,15 @@ if __name__ == '__main__':
 
         # _, _ = [x.train() for x in (embedding_net, cls_head)]
         _, _, _, _ = [x.train() for x in (embedding_net, cls_head, add_te_func, postprocessing_net)]
+        if 'imagenet' in opt.dataset.lower():
+            film_preprocess = film_preprocess.train()
 
         train_accuracies = []
         train_losses = []
 
         for i, batch in enumerate(tqdm(dloader_train(epoch)), 1):
             data_support, labels_support, data_query, labels_query, _, _ = [x.cuda() for x in batch]
+            # print(data_support.size())
 
             train_n_support = opt.train_way * opt.train_shot
             train_n_query = opt.train_way * opt.train_query
@@ -304,6 +309,8 @@ if __name__ == '__main__':
                 assert('FiLM' in opt.task_embedding)
                 emb_task, _ = add_te_func(
                     emb_support, labels_support, opt.train_way, opt.train_shot)
+                if 'imagenet' in opt.dataset.lower():
+                    emb_task = film_preprocess(emb_task.squeeze(1)).unsqueeze(1)
             else:
                 emb_task, _ = None, None
 
@@ -375,7 +382,7 @@ if __name__ == '__main__':
             if (i % 100 == 0):
                 train_acc_avg = np.mean(np.array(train_accuracies))
                 log(log_file_path, 'Train Epoch: {}\tBatch: [{}/{}]\tLoss: {:.4f}\tAccuracy: {:.2f} % ({:.2f} %)'.format(
-                            epoch, i, len(dloader_train), loss.item(), train_acc_avg, acc))
+                            epoch, i, len(dloader_train), loss.item(), train_acc_avg, acc.item()))
 
             optimizer.zero_grad()
             loss.backward()
@@ -383,6 +390,8 @@ if __name__ == '__main__':
 
         # Evaluate on the validation split
         _, _, _, _ = [x.eval() for x in (embedding_net, cls_head, add_te_func, postprocessing_net)]
+        if 'imagenet' in opt.dataset.lower():
+            film_preprocess = film_preprocess.eval()
 
         val_accuracies = []
         val_losses = []
@@ -403,6 +412,8 @@ if __name__ == '__main__':
                 assert('FiLM' in opt.task_embedding)
                 emb_task, G = add_te_func(
                     emb_support, labels_support, opt.test_way, opt.val_shot)
+                if 'imagenet' in opt.dataset.lower():
+                    emb_task = film_preprocess(emb_task.squeeze(1)).unsqueeze(1)
             else:
                 emb_task, G = None, None
 
@@ -487,6 +498,9 @@ if __name__ == '__main__':
                        os.path.join(opt.save_path, 'epoch_{}.pth'.format(epoch)))
 
         log(log_file_path, 'Elapsed Time: {}/{}\n'.format(timer.measure(), timer.measure(epoch / float(opt.num_epoch))))
+
+        # empty cache
+        torch.cuda.empty_cache()
 
         # Learning rate decay
         lr_scheduler.step()

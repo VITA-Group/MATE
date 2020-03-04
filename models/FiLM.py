@@ -22,12 +22,12 @@ class FiLM_Layer(nn.Module):
         # self.sigma_multiplier = nn.Parameter(torch.ones(1).float())
         # self.mu_multiplier = nn.Parameter(torch.zeros(1).float())
         # self.sigma_multiplier = nn.Parameter(torch.zeros(1).float())
-        # self.MLP = nn.Sequential(
-        #     nn.Linear(int(in_channels), int(alpha*channels*2), bias=True),
-        #     nn.LeakyReLU(inplace=True),
-        #     nn.Linear(int(alpha*channels*2), int(channels*2), bias=True),
-        # )
-        self.MLP = nn.Linear(int(in_channels), int(alpha*channels*2), bias=True)
+        self.MLP = nn.Sequential(
+            nn.Linear(int(in_channels), int(alpha*channels*2), bias=True),
+            nn.LeakyReLU(inplace=True),
+            nn.Linear(int(alpha*channels*2), int(channels*2), bias=True),
+        )
+        # self.MLP = nn.Linear(int(in_channels), int(alpha*channels*2), bias=True)
 
     def forward(self, _input, _lambda):
         # print(_input.abs().mean())
@@ -36,7 +36,7 @@ class FiLM_Layer(nn.Module):
             out = self.MLP(_lambda)
             mu, sigma = torch.split(out, [self.channels, self.channels], dim=-1)
             # if self.activation is not None:
-                # mu, sigma = self.activation(mu), self.activation(sigma)
+            #     mu, sigma = self.activation(mu), self.activation(sigma)
             mu = mu.view(N, C, 1, 1).expand_as(_input) * self.mu_multiplier
             mu = mu.clamp(-1.0, 1.0)
             sigma = sigma.view(N, C, 1, 1).expand_as(_input) * self.sigma_multiplier

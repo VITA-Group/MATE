@@ -190,6 +190,8 @@ if __name__ == '__main__':
                             help='use an extra post processing net for sample embeddings')
     parser.add_argument('--dual-BN', action='store_true',
                             help='Use dual BN together with FiLM layers')
+    parser.add_argument('--mix-train', action='store_true',
+                            help='Mix train using logits without and with task embedding')
     parser.add_argument('--orthogonal-reg', type=float, default=0.0,
                             help='Regularization term of orthogonality between task representations')
     parser.add_argument('--wgrad-l1-reg', type=float, default=0.0,
@@ -292,6 +294,11 @@ if __name__ == '__main__':
             # First pass without task embeddings
             emb_support = embedding_net(data_support.reshape([-1] + list(data_support.shape[-3:])), task_embedding=None)
             emb_support = emb_support.reshape(opt.episodes_per_batch, train_n_support, -1)
+            if opt.mix_train:
+                emb_query_none = embedding_net(data_query.reshape([-1] + list(data_query.shape[-3:])), task_embedding=None)
+                emb_query_none = emb_query_none.reshape(opt.episodes_per_batch, train_n_query, -1)
+                logit_query_none = cls_head(emb_query_none, emb_support, labels_support, opt.train_way, opt.train_shot)
+
 
             if epoch > opt.start_epoch:
                 assert('FiLM' in opt.task_embedding)
@@ -352,7 +359,12 @@ if __name__ == '__main__':
             log_prb = F.log_softmax(logit_query.reshape(-1, opt.train_way), dim=1)
             loss = -(smoothed_one_hot * log_prb).sum(dim=1)
             loss = loss.mean()
-            loss += opt.orthogonal_reg * loss_ortho_reg
+            if opt.mix_train:
+                alpha = 0.99 * 0.5**(epoch // 4)
+                log_prb_none = F.log_softmax(logit_query_none.reshape(-1, opt.train_way), dim=1)
+                loss_none = -(smoothed_one_hot * log_prb_none).sum(dim=1).mean()
+                loss = loss_none * alpha + loss * (1-alpha)
+            # loss += opt.orthogonal_reg * loss_ortho_reg
             # loss += opt.orthogonal_reg * loss_ortho_reg + opt.wgrad_l1_reg * loss_wgrad_l1_reg
 
             acc = count_accuracy(logit_query.reshape(-1, opt.train_way), labels_query.reshape(-1))

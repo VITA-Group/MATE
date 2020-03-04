@@ -29,6 +29,7 @@ class FiLM_Layer(nn.Module):
         )
 
     def forward(self, _input, _lambda):
+        # print(_input.abs().mean())
         N, C, H, W = _input.size()
         if _lambda is not None:
             out = self.MLP(_lambda)
@@ -36,7 +37,9 @@ class FiLM_Layer(nn.Module):
             if self.activation is not None:
                 mu, sigma = self.activation(mu), self.activation(sigma)
             mu = mu.view(N, C, 1, 1).expand_as(_input) * self.mu_multiplier
+            mu = mu.clamp(-1.0, 1.0)
             sigma = sigma.view(N, C, 1, 1).expand_as(_input) * self.sigma_multiplier
+            # print(mu.abs().mean(), sigma.abs().mean())
             # print(mu.size(), sigma.size())
             # print(mu[0,:,0,0], sigma[0,:,0,0])
             # print(self.mu_multiplier, self.sigma_multiplier)

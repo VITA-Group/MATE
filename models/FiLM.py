@@ -35,8 +35,8 @@ class FiLM_Layer(nn.Module):
         if _lambda is not None:
             out = self.MLP(_lambda)
             mu, sigma = torch.split(out, [self.channels, self.channels], dim=-1)
-            # if self.activation is not None:
-            #     mu, sigma = self.activation(mu), self.activation(sigma)
+            if self.activation is not None:
+                mu, sigma = self.activation(mu), self.activation(sigma)
             mu = mu.view(N, C, 1, 1).expand_as(_input) * self.mu_multiplier
             mu = mu.clamp(-1.0, 1.0)
             sigma = sigma.view(N, C, 1, 1).expand_as(_input) * self.sigma_multiplier

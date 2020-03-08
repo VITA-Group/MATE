@@ -240,11 +240,16 @@ if __name__ == '__main__':
     if 'imagenet' in opt.dataset.lower() and 'film' in opt.task_embedding.lower():
         film_preprocess = nn.Linear(16000, 2560, False).cuda()
 
-    optimizer = torch.optim.SGD([{'params': embedding_net.parameters()},
-                                 {'params': cls_head.parameters()},
-                                 {'params': add_te_func.parameters()},
-                                 {'params': postprocessing_net.parameters()}],
-                                lr=0.1, momentum=0.9, weight_decay=5e-4, nesterov=True)
+    params = [
+        {'params': embedding_net.parameters()},
+        {'params': cls_head.parameters()},
+        {'params': add_te_func.parameters()},
+        {'params': postprocessing_net.parameters()}
+    ]
+    if 'imagenet' in opt.dataset.lower() and 'film' in opt.task_embedding.lower():
+        params.append({'params': film_preprocess.parameters()})
+    optimizer = torch.optim.SGD(
+        params, lr=0.1, momentum=0.9, weight_decay=5e-4, nesterov=True)
 
     # Load saved model checkpoints
     if opt.load is not None:
@@ -465,37 +470,50 @@ if __name__ == '__main__':
 
         val_loss_avg = np.mean(np.array(val_losses))
 
+        save_dict = {
+            'epoch': epoch,
+            'embedding': embedding_net.state_dict(),
+            'head': cls_head.state_dict(),
+            'task_embedding': add_te_func.state_dict(),
+            'postprocessing': postprocessing_net.state_dict(),
+            'optimizer': optimizer.state_dict()
+        }
+        if 'imagenet' in opt.dataset.lower() and 'film' in opt.task_embedding.lower():
+            save_dict['film_preprocess'] = film_preprocess.state_dict()
         if val_acc_avg > max_val_acc:
             max_val_acc = val_acc_avg
-            torch.save({'epoch': epoch,
-                        'embedding': embedding_net.state_dict(),
-                        'head': cls_head.state_dict(),
-                        'task_embedding': add_te_func.state_dict(),
-                        'postprocessing': postprocessing_net.state_dict(),
-                        'optimizer': optimizer.state_dict()},
-                       os.path.join(opt.save_path, 'best_model.pth'))
+            torch.save(save_dict, os.path.join(opt.save_path, 'best_model.pth'))
+            # torch.save({'epoch': epoch,
+            #             'embedding': embedding_net.state_dict(),
+            #             'head': cls_head.state_dict(),
+            #             'task_embedding': add_te_func.state_dict(),
+            #             'postprocessing': postprocessing_net.state_dict(),
+            #             'optimizer': optimizer.state_dict()},
+            #            os.path.join(opt.save_path, 'best_model.pth'))
             log(log_file_path, 'Validation Epoch: {}\t\t\tLoss: {:.4f}\tAccuracy: {:.2f} ± {:.2f} % (Best)'\
                   .format(epoch, val_loss_avg, val_acc_avg, val_acc_ci95))
         else:
             log(log_file_path, 'Validation Epoch: {}\t\t\tLoss: {:.4f}\tAccuracy: {:.2f} ± {:.2f} %'\
                   .format(epoch, val_loss_avg, val_acc_avg, val_acc_ci95))
 
-        torch.save({'epoch': epoch,
-                    'embedding': embedding_net.state_dict(),
-                    'head': cls_head.state_dict(),
-                    'task_embedding': add_te_func.state_dict(),
-                    'postprocessing': postprocessing_net.state_dict(),
-                    'optimizer': optimizer.state_dict()},
-                   os.path.join(opt.save_path, 'last_epoch.pth'))
+        torch.save(save_dict, os.path.join(opt.save_path, 'last_epoch.pth'))
+        # torch.save({'epoch': epoch,
+        #             'embedding': embedding_net.state_dict(),
+        #             'head': cls_head.state_dict(),
+        #             'task_embedding': add_te_func.state_dict(),
+        #             'postprocessing': postprocessing_net.state_dict(),
+        #             'optimizer': optimizer.state_dict()},
+        #            os.path.join(opt.save_path, 'last_epoch.pth'))
 
         if epoch % opt.save_epoch == 0 or epoch in [21,22,23,24,25]:
-            torch.save({'epoch': epoch,
-                        'embedding': embedding_net.state_dict(),
-                        'head': cls_head.state_dict(),
-                        'task_embedding': add_te_func.state_dict(),
-                        'postprocessing': postprocessing_net.state_dict(),
-                        'optimizer': optimizer.state_dict()},
-                       os.path.join(opt.save_path, 'epoch_{}.pth'.format(epoch)))
+            torch.save(save_dict, os.path.join(opt.save_path, 'epoch_{}.pth'.format(epoch)))
+            # torch.save({'epoch': epoch,
+            #             'embedding': embedding_net.state_dict(),
+            #             'head': cls_head.state_dict(),
+            #             'task_embedding': add_te_func.state_dict(),
+            #             'postprocessing': postprocessing_net.state_dict(),
+            #             'optimizer': optimizer.state_dict()},
+            #            os.path.join(opt.save_path, 'epoch_{}.pth'.format(epoch)))
 
         log(log_file_path, 'Elapsed Time: {}/{}\n'.format(timer.measure(), timer.measure(epoch / float(opt.num_epoch))))
 

@@ -44,7 +44,7 @@ def get_model(options):
         if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=5,
-                film_indim=1, film_alpha=1.0, film_act=F.leaky_relu,
+                film_indim=2560, film_alpha=1.0, film_act=F.leaky_relu,
                 dual_BN=options.dual_BN).cuda()
         else:
             network = resnet12_film(
@@ -202,6 +202,8 @@ if __name__ == '__main__':
     (embedding_net, cls_head) = get_model(opt)
     add_te_func = get_task_embedding_func(opt)
     postprocessing_net = get_postprocessing_model(opt)
+    if 'imagenet' in opt.dataset.lower() and 'film' in opt.task_embedding.lower():
+        film_preprocess = nn.Linear(16000, 2560, False).cuda()
 
     # Load saved model checkpoints
     saved_models = torch.load(opt.load)
@@ -215,6 +217,8 @@ if __name__ == '__main__':
     if 'postprocessing' in saved_models.keys():
         postprocessing_net.load_state_dict(saved_models['postprocessing'])
         postprocessing_net.eval()
+    if 'film_preprocess' in saved_models.keys():
+        film_preprocess.load_state_dict(saved_models['film_preprocess'])
 
     # Evaluate on test set
     test_accuracies = []
@@ -234,6 +238,8 @@ if __name__ == '__main__':
         assert('FiLM' in opt.task_embedding)
         emb_task, _ = add_te_func(
             emb_support, labels_support, opt.way, opt.shot)
+        if 'imagenet' in opt.dataset.lower():
+            emb_task = film_preprocess(emb_task.squeeze(1)).unsqueeze(1)
         # print(emb_task)
         # print(emb_task * 10**5)
 

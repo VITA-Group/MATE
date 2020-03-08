@@ -51,15 +51,16 @@ def get_model(options):
         device_ids = list(range(len(options.gpu.split(','))))
         network = torch.nn.DataParallel(network, device_ids=device_ids)
     elif options.network == 'ResNet_FiLM':
+        film_act = None if options.no_film_activation else F.leaky_relu
         if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=5,
-                film_indim=2560, film_alpha=1.0, film_act=F.leaky_relu,
+                film_indim=2560, film_alpha=1.0, film_act=film_act,
                 dual_BN=options.dual_BN).cuda()
         else:
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=2,
-                film_indim=2560, film_alpha=1.0, film_act=F.leaky_relu,
+                film_indim=2560, film_alpha=1.0, film_act=film_act,
                 dual_BN=options.dual_BN).cuda()
         device_ids = list(range(len(options.gpu.split(','))))
         network = torch.nn.DataParallel(network, device_ids=device_ids)
@@ -188,6 +189,8 @@ if __name__ == '__main__':
                             help='choose when to use task embedding')
     parser.add_argument('--post-processing', type=str, default='None',
                             help='use an extra post processing net for sample embeddings')
+    parser.add_argument('--no-film-activation', action='store_true',
+                            help='no activation function in FiLM layers')
     parser.add_argument('--dual-BN', action='store_true',
                             help='Use dual BN together with FiLM layers')
     parser.add_argument('--mix-train', action='store_true',

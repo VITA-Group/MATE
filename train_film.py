@@ -196,6 +196,8 @@ if __name__ == '__main__':
                             help='Regularization term of orthogonality between task representations')
     parser.add_argument('--wgrad-l1-reg', type=float, default=0.0,
                             help='Regularization term of l1 norm of WGrad')
+    parser.add_argument('--wgrad-prune-ratio', type=float, default=0.0,
+                            help='Pruning ratio of the gradient of w')
 
     opt = parser.parse_args()
 
@@ -313,7 +315,7 @@ if __name__ == '__main__':
             if epoch > opt.start_epoch:
                 assert('FiLM' in opt.task_embedding)
                 emb_task, _ = add_te_func(
-                    emb_support, labels_support, opt.train_way, opt.train_shot)
+                    emb_support, labels_support, opt.train_way, opt.train_shot, opt.wgrad_prune_ratio)
                 if 'imagenet' in opt.dataset.lower():
                     emb_task = film_preprocess(emb_task.squeeze(1)).unsqueeze(1)
             else:
@@ -416,7 +418,7 @@ if __name__ == '__main__':
             if epoch > opt.start_epoch:
                 assert('FiLM' in opt.task_embedding)
                 emb_task, G = add_te_func(
-                    emb_support, labels_support, opt.test_way, opt.val_shot)
+                    emb_support, labels_support, opt.test_way, opt.val_shot, opt.wgrad_prune_ratio)
                 if 'imagenet' in opt.dataset.lower():
                     emb_task = film_preprocess(emb_task.squeeze(1)).unsqueeze(1)
             else:

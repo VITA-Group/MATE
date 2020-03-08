@@ -177,6 +177,8 @@ if __name__ == '__main__':
                             help='use an extra post processing net for sample embeddings')
     parser.add_argument('--dual-BN', action='store_true',
                             help='Use dual BN together with FiLM layers')
+    parser.add_argument('--wgrad-prune-ratio', type=float, default=0.0,
+                            help='Pruning ratio of the gradient of w')
 
     opt = parser.parse_args()
     (dataset_test, data_loader) = get_dataset(opt)
@@ -237,7 +239,7 @@ if __name__ == '__main__':
 
         assert('FiLM' in opt.task_embedding)
         emb_task, _ = add_te_func(
-            emb_support, labels_support, opt.way, opt.shot)
+            emb_support, labels_support, opt.way, opt.shot, opt.wgrad_prune_ratio)
         if 'imagenet' in opt.dataset.lower():
             emb_task = film_preprocess(emb_task.squeeze(1)).unsqueeze(1)
         # print(emb_task)

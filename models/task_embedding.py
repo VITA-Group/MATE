@@ -102,7 +102,7 @@ class TaskEmbedding_Cat_SVM_WGrad(nn.Module):
         self.cls_head = ClassificationHead(base_learner='SVM-CS-WNorm')
 
     def forward(self, emb_support, emb_query, data_support, data_query,
-                labels_support, train_way, train_shot):
+                labels_support, train_way, train_shot, prune_ratio=0.0):
         n_episode, n_support, d = emb_support.size()
         # Train the SVM head
         logit_support, wnorm = self.cls_head(emb_support, emb_support, labels_support, train_way, train_shot)
@@ -112,7 +112,12 @@ class TaskEmbedding_Cat_SVM_WGrad(nn.Module):
         wgrad_abs = wgrad.abs()
         # Normalize gradient
         with torch.no_grad():
-            wgrad_abs_sum = torch.sum(wgrad_abs, dim=(1,2), keepdim=True)
+            # Prune the gradient according to the magnitude
+            if prune_ratio > 0:
+                assert prune_ratio < 1.0
+                num_pruned = int(d * prune_ratio)
+                threshold = torch.kthvalue(wgrad_abs, k=num_pruned, dim=-1, keepdim=True).detach()
+            wgrad_abs_sum = torch.sum(wgrad_abs, dim=(1,2), keepdim=True).detach()
         G = wgrad_abs / wgrad_abs_sum * d
 
         # Compute task features
@@ -129,7 +134,8 @@ class TaskEmbedding_FiLM_SVM_WGrad(nn.Module):
         super(TaskEmbedding_FiLM_SVM_WGrad, self).__init__()
         self.cls_head = ClassificationHead(base_learner='SVM-CS-WNorm')
 
-    def forward(self, emb_support, labels_support, train_way, train_shot):
+    def forward(self, emb_support, labels_support, train_way, train_shot,
+                prune_ratio=0.0):
         n_episode, n_support, d = emb_support.size()
         # Train the SVM head
         logit_support, wnorm = self.cls_head(emb_support, emb_support, labels_support, train_way, train_shot)
@@ -139,6 +145,11 @@ class TaskEmbedding_FiLM_SVM_WGrad(nn.Module):
         wgrad_abs = wgrad.abs()
         # Normalize gradient
         with torch.no_grad():
+            # Prune the gradient according to the magnitude
+            if prune_ratio > 0:
+                assert prune_ratio < 1.0
+                num_pruned = int(d * prune_ratio)
+                threshold = torch.kthvalue(wgrad_abs, k=num_pruned, dim=-1, keepdim=True).detach()
             wgrad_abs_sum = torch.sum(wgrad_abs, dim=(1,2), keepdim=True)
         G = wgrad_abs / wgrad_abs_sum * d
         # print(labels_support)

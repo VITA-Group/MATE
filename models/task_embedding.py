@@ -116,7 +116,7 @@ class TaskEmbedding_Cat_SVM_WGrad(nn.Module):
             if prune_ratio > 0:
                 assert prune_ratio < 1.0
                 num_pruned = int(d * prune_ratio)
-                threshold = torch.kthvalue(wgrad_abs, k=num_pruned, dim=-1, keepdim=True).detach()
+                threshold = torch.kthvalue(wgrad_abs, k=num_pruned, dim=-1, keepdim=True)[0].detach()
             wgrad_abs_sum = torch.sum(wgrad_abs, dim=(1,2), keepdim=True).detach()
         G = wgrad_abs / wgrad_abs_sum * d
 
@@ -149,7 +149,7 @@ class TaskEmbedding_FiLM_SVM_WGrad(nn.Module):
             if prune_ratio > 0:
                 assert prune_ratio < 1.0
                 num_pruned = int(d * prune_ratio)
-                threshold = torch.kthvalue(wgrad_abs, k=num_pruned, dim=-1, keepdim=True).detach()
+                threshold = torch.kthvalue(wgrad_abs, k=num_pruned, dim=-1, keepdim=True)[0].detach()
             wgrad_abs_sum = torch.sum(wgrad_abs, dim=(1,2), keepdim=True)
         G = wgrad_abs / wgrad_abs_sum * d
         # print(labels_support)

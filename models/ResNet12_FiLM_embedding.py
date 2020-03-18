@@ -121,6 +121,7 @@ class ResNet_FiLM(nn.Module):
             film_indim=film_indim, film_alpha=film_alpha, film_act=film_act, dual_BN=dual_BN)
         if avg_pool:
             self.avgpool = nn.AvgPool2d(5, stride=1)
+
         self.keep_prob = keep_prob
         self.keep_avg_pool = avg_pool
         self.dropout = nn.Dropout(p=1 - self.keep_prob, inplace=False)
@@ -129,8 +130,8 @@ class ResNet_FiLM(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='leaky_relu')
-            # elif isinstance(m, nn.Linear):
-            #     nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='leaky_relu')
+            elif isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='leaky_relu')
             elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)

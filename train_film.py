@@ -306,13 +306,22 @@ if __name__ == '__main__':
             train_n_query = opt.train_way * opt.train_query
 
             # First pass without task embeddings
-            emb_support = embedding_net(data_support.reshape([-1] + list(data_support.shape[-3:])), task_embedding=None)
-            emb_support = emb_support.reshape(opt.episodes_per_batch, train_n_support, -1)
+            emb_support = embedding_net(
+                data_support.reshape([-1] + list(data_support.shape[-3:])),
+                task_embedding = None,
+                n_expand = None
+            )
+            emb_support = emb_support.reshape(
+                opt.episodes_per_batch, train_n_support, -1)
+
             if opt.mix_train:
-                emb_query_none = embedding_net(data_query.reshape([-1] + list(data_query.shape[-3:])), task_embedding=None)
+                emb_query_none = embedding_net(
+                    data_query.reshape([-1] + list(data_query.shape[-3:])),
+                    task_embedding = None,
+                    n_expand = None
+                )
                 emb_query_none = emb_query_none.reshape(opt.episodes_per_batch, train_n_query, -1)
                 logit_query_none = cls_head(emb_query_none, emb_support, labels_support, opt.train_way, opt.train_shot)
-
 
             if epoch > opt.start_epoch:
                 assert('FiLM' in opt.task_embedding)
@@ -359,7 +368,6 @@ if __name__ == '__main__':
                 # emb_task_query_batch = emb_task.expand(-1, train_n_query, -1)
                 emb_query = embedding_net(
                     data_query.reshape([-1] + list(data_query.shape[-3:])),
-                    # emb_task_query_batch.reshape(-1, emb_task.size(-1))
                     task_embedding = emb_task,
                     n_expand = train_n_query
                 )

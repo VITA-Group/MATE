@@ -24,6 +24,12 @@ class FiLM_Layer(nn.Module):
             nn.Linear(int(alpha*channels*2), int(channels*2), bias=True),
         )
 
+    def get_mlp_output(self, _task_emb):
+        assert _task_emb is not None
+        _task_emb = _task_emb.squeeze(1)
+        _out = self.MLP(_task_emb)
+        return _out.unsqueeze(1)
+
     def forward(self, _input, _task_emb, n_expand):
         self._task_emb = _task_emb
         N, C, H, W = _input.size()

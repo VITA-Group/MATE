@@ -395,7 +395,11 @@ if __name__ == '__main__':
                 loss = loss_none * alpha + loss * (1-alpha)
 
             # FiLM regularization
-            loss_film_reg = get_film_loss(embedding_net, opt.film_reg_type)
+            loss_film_reg = get_film_loss(
+                embedding_net,
+                emb_task,
+                opt.film_reg_type
+            )
             loss += opt.film_reg_level * loss_film_reg
 
             # loss += opt.orthogonal_reg * loss_ortho_reg

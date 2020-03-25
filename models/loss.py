@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+from .FiLM import FiLM_Layer
 
 
 def get_film_loss(model, loss_type):

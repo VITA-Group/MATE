@@ -35,7 +35,7 @@ def get_film_msgan_loss(model, _task_emb):
 
     """
 
-    assert task_emb is not None
+    assert _task_emb is not None
     film_loss = 0.0
     for m in model.modules():
         if isinstance(m, FiLM_Layer):

@@ -109,6 +109,8 @@ class ResNet(nn.Module):
         # self.avgpool = nn.AvgPool2d(7, stride=1)
         # self.fc = nn.Linear(512 * block.expansion, num_classes)
 
+        self.dual_BN = dual_BN
+
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
@@ -139,17 +141,21 @@ class ResNet(nn.Module):
         for i in range(1, blocks):
             layers.append(block(self.inplanes, planes))
 
-        return nn.Sequential(*layers)
+        # return nn.Sequential(*layers)
+        return layers
 
-    def forward(self, x):
+    def forward(self, x, task_embedding):
         x = self.conv1(x)
-        x = self.bn1(x)
+        x = self.bn1(x, task_embedding) if self.dual_BN else self.bn1(x)
         x = self.relu(x)
         x = self.maxpool(x)
 
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
+        for m in self.layer1:
+            x = m(x, task_embedding)
+        for m in self.layer2:
+            x = m(x, task_embedding)
+        for m in self.layer3:
+            x = m(x, task_embedding)
 
         return x
 
@@ -166,15 +172,15 @@ def feat_extract(pretrained=False, **kwargs):
     logger = kwargs['opts'].logger
     # resnet"x", x = 1 + sum(layers)x3
     if kwargs['structure'] == 'resnet40':
-        model = ResNet(Bottleneck, [3, 4, 6], kwargs['in_c'])
+        model = ResNet(Bottleneck, [3, 4, 6], kwargs['in_c'], **kwargs)
     elif kwargs['structure'] == 'resnet19':
-        model = ResNet(Bottleneck, [2, 2, 2], kwargs['in_c'])
+        model = ResNet(Bottleneck, [2, 2, 2], kwargs['in_c'], **kwargs)
     elif kwargs['structure'] == 'resnet52':
-        model = ResNet(Bottleneck, [4, 8, 5], kwargs['in_c'])
+        model = ResNet(Bottleneck, [4, 8, 5], kwargs['in_c'], **kwargs)
     elif kwargs['structure'] == 'resnet34':
-        model = ResNet(Bottleneck, [3, 4, 4], kwargs['in_c'])
+        model = ResNet(Bottleneck, [3, 4, 4], kwargs['in_c'], **kwargs)
     elif kwargs['structure'] == 'shallow':
-        model = CNNEncoder(kwargs['in_c'])
+        model = CNNEncoder(kwargs['in_c'], **kwargs)
     else:
         raise NameError('structure not known {} ...'.format(kwargs['structure']))
     if pretrained:

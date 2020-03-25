@@ -7,3 +7,12 @@ experiments
 # Dataset
 data
 
+# PDF Files
+**/*.pdf
+
+# Numpy Files
+**/*.np?
+
+# IPython Notebooks
+**/.ipynb_checkpoints/*
+**/*.ipynb

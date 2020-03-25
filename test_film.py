@@ -103,24 +103,6 @@ def get_task_embedding_func(options):
     # Choose the task embedding function
     te_args = dict(dataset=options.dataset) if options.task_embedding == 'Relation' else dict()
     te_func = TaskEmbedding(metric=options.task_embedding, **te_args).cuda()
-    # if options.task_embedding == 'KME':
-    #     te_func = TaskEmbedding(metric='KME').cuda()
-    # elif options.task_embedding == 'Cosine':
-    #     te_func = TaskEmbedding(metric='Cosine').cuda()
-    # elif options.task_embedding == 'Entropy_SVM_NoGrad':
-    #     te_func = TaskEmbedding(metric='Entropy_SVM_NoGrad').cuda()
-    # elif options.task_embedding == 'Entropy_SVM':
-    #     te_func = TaskEmbedding(metric='Entropy_SVM').cuda()
-    # elif options.task_embedding == 'Cat_SVM_WGrad':
-    #     te_func = TaskEmbedding(metric='Cat_SVM_WGrad').cuda()
-    # elif options.task_embedding == 'Entropy_Ridge':
-    #     te_func = TaskEmbedding(metric='Entropy_Ridge').cuda()
-    # elif options.task_embedding == 'Relation':
-    #     te_func = TaskEmbedding(metric='Relation', dataset=options.dataset).cuda()
-    # elif options.task_embedding == 'None':
-    #     te_func = TaskEmbedding(metric='None').cuda()
-    # else:
-    #     raise ValueError('Cannot recognize the task embedding type `{}`'.format(options.task_embedding))
 
     device_ids = list(range(len(options.gpu.split(','))))
     te_func = torch.nn.DataParallel(te_func, device_ids=device_ids)
@@ -130,25 +112,25 @@ def get_task_embedding_func(options):
 def get_postprocessing_model(options):
     # Choose the post processing network for embeddings
     if options.post_processing == 'FC':
-        return PostProcessingNet(dataset=options.dataset, task_embedding=options.task_embedding).cuda()
+        return PostProcessingNet(
+            dataset=options.dataset,
+            task_embedding=options.task_embedding).cuda()
+
     if options.post_processing == 'Conv1d':
         postprocessing_net = PostProcessingNetConv1d().cuda()
-        # if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
-        #     device_ids = list(range(len(options.gpu.split(','))))
-        #     postprocessing_net = torch.nn.DataParallel(postprocessing_net, device_ids=device_ids)
         device_ids = list(range(len(options.gpu.split(','))))
-        postprocessing_net = torch.nn.DataParallel(postprocessing_net, device_ids=device_ids)
+        postprocessing_net = torch.nn.DataParallel(
+            postprocessing_net, device_ids=device_ids)
         return postprocessing_net
+
     if options.post_processing == 'Conv1d_SelfAttn':
-        # if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
-        #     skip_attn1 = True
-        #     print('First attention skipped')
-        # else:
-        #     skip_attn1 = False
-        postprocessing_net = PostProcessingNetConv1d_SelfAttn(dataset=options.dataset).cuda()
+        postprocessing_net = PostProcessingNetConv1d_SelfAttn(
+            dataset=options.dataset).cuda()
         device_ids = list(range(len(options.gpu.split(','))))
-        postprocessing_net = torch.nn.DataParallel(postprocessing_net, device_ids=device_ids)
+        postprocessing_net = torch.nn.DataParallel(
+            postprocessing_net, device_ids=device_ids)
         return postprocessing_net
+
     elif options.post_processing == 'None':
         return Identity().cuda()
 
@@ -167,11 +149,14 @@ if __name__ == '__main__':
     parser.add_argument('--query', type=int, default=15,
                             help='number of query examples per training class')
     parser.add_argument('--network', type=str, default='ProtoNet',
-                            help='choose which embedding network to use. ProtoNet, R2D2, ResNet')
+                            help='choose which embedding network to use.'
+                                 ' ProtoNet, R2D2, ResNet')
     parser.add_argument('--head', type=str, default='ProtoNet',
-                            help='choose which embedding network to use. ProtoNet, Ridge, R2D2, SVM')
+                            help='choose which embedding network to use.'
+                                 ' ProtoNet, Ridge, R2D2, SVM')
     parser.add_argument('--dataset', type=str, default='miniImageNet',
-                            help='choose which classification head to use. miniImageNet, tieredImageNet, CIFAR_FS, FC100')
+                            help='choose which classification head to use.'
+                                 ' miniImageNet, tieredImageNet, CIFAR_FS, FC100')
     parser.add_argument('--task-embedding', type=str, default='None',
                             help='choose which type of task embedding will be used')
     parser.add_argument('--post-processing', type=str, default='None',
@@ -250,15 +235,17 @@ if __name__ == '__main__':
 
         # Forward pass for support samples with task embeddings
         if emb_task is not None:
-            emb_task_support_batch = emb_task.expand(1, n_support, -1)
+            # emb_task_support_batch = emb_task.expand(1, n_support, -1)
             emb_support = embedding_net(
                 data_support.reshape([-1] + list(data_support.shape[-3:])),
-                task_embedding=emb_task_support_batch.reshape(-1, emb_task.size(-1))
+                task_embedding = emb_task,
+                n_expand = n_support
             )
         else:
             emb_support = embedding_net(
                 data_support.reshape([-1] + list(data_support.shape[-3:])),
-                task_embedding=None
+                task_embedding = None,
+                n_expand = None
             )
         # emb_support = postprocessing_net(emb_support.reshape([-1] + list(emb_support.size()[2:])))
         emb_support = emb_support.reshape(1, n_support, -1)

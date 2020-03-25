@@ -88,24 +88,6 @@ def get_task_embedding_func(options):
     # Choose the task embedding function
     te_args = dict(dataset=options.dataset) if options.task_embedding == 'Relation' else dict()
     te_func = TaskEmbedding(metric=options.task_embedding, **te_args).cuda()
-    # if options.task_embedding == 'KME':
-    #     te_func = TaskEmbedding(metric='KME').cuda()
-    # elif options.task_embedding == 'Cosine':
-    #     te_func = TaskEmbedding(metric='Cosine').cuda()
-    # elif options.task_embedding == 'Entropy_SVM_NoGrad':
-    #     te_func = TaskEmbedding(metric='Entropy_SVM_NoGrad').cuda()
-    # elif options.task_embedding == 'Entropy_SVM':
-    #     te_func = TaskEmbedding(metric='Entropy_SVM').cuda()
-    # elif options.task_embedding == 'Cat_SVM_WGrad':
-    #     te_func = TaskEmbedding(metric='Cat_SVM_WGrad').cuda()
-    # elif options.task_embedding == 'Entropy_Ridge':
-    #     te_func = TaskEmbedding(metric='Entropy_Ridge').cuda()
-    # elif options.task_embedding == 'Relation':
-    #     te_func = TaskEmbedding(metric='Relation', dataset=options.dataset).cuda()
-    # elif options.task_embedding == 'None':
-    #     te_func = TaskEmbedding(metric='None').cuda()
-    # else:
-    #     raise ValueError('Cannot recognize the task embedding type `{}`'.format(options.task_embedding))
 
     device_ids = list(range(len(options.gpu.split(','))))
     te_func = torch.nn.DataParallel(te_func, device_ids=device_ids)
@@ -118,18 +100,10 @@ def get_postprocessing_model(options):
         return PostProcessingNet(dataset=options.dataset, task_embedding=options.task_embedding).cuda()
     if options.post_processing == 'Conv1d':
         postprocessing_net = PostProcessingNetConv1d().cuda()
-        # if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
-        #     device_ids = list(range(len(options.gpu.split(','))))
-        #     postprocessing_net = torch.nn.DataParallel(postprocessing_net, device_ids=device_ids)
         device_ids = list(range(len(options.gpu.split(','))))
         postprocessing_net = torch.nn.DataParallel(postprocessing_net, device_ids=device_ids)
         return postprocessing_net
     if options.post_processing == 'Conv1d_SelfAttn':
-        # if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
-        #     skip_attn1 = True
-        #     print('First attention skipped')
-        # else:
-        #     skip_attn1 = False
         postprocessing_net = PostProcessingNetConv1d_SelfAttn(dataset=options.dataset).cuda()
         device_ids = list(range(len(options.gpu.split(','))))
         postprocessing_net = torch.nn.DataParallel(postprocessing_net, device_ids=device_ids)

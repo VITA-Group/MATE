@@ -18,25 +18,27 @@ class FiLM_Layer(nn.Module):
         self.activation = activation
         self.mu_multiplier = 1.0
         self.sigma_multiplier = 1.0
-        # self.mu_multiplier = nn.Parameter(torch.ones(1).float())
-        # self.sigma_multiplier = nn.Parameter(torch.ones(1).float())
-        # self.mu_multiplier = nn.Parameter(torch.zeros(1).float())
-        # self.sigma_multiplier = nn.Parameter(torch.zeros(1).float())
         self.MLP = nn.Sequential(
             nn.Linear(int(in_channels), int(alpha*channels*2), bias=True),
             nn.LeakyReLU(inplace=True),
             nn.Linear(int(alpha*channels*2), int(channels*2), bias=True),
         )
-        # self.MLP = nn.Linear(int(in_channels), int(alpha*channels*2), bias=True)
 
-    def forward(self, _input, _lambda):
-        # print(_input.abs().mean())
+    def forward(self, _input, _task_emb, n_expand):
+        self._task_emb = _task_emb
         N, C, H, W = _input.size()
-        if _lambda is not None:
-            out = self.MLP(_lambda)
-            mu, sigma = torch.split(out, [self.channels, self.channels], dim=-1)
+        # print(_input.abs().mean())
+        if _task_emb is not None:
+            _task_emb = _task_emb.squeeze(1)
+            _out = self.MLP(_task_emb)
+            self._out = _out.unsqueeze(1)
+            _out = self._out.expand(-1, n_expand, -1).reshape(-1, self._out.size(-1))
+
+            mu, sigma = torch.split(
+                _out, [self.channels, self.channels], dim=-1)
             if self.activation is not None:
                 mu, sigma = self.activation(mu), self.activation(sigma)
+
             mu = mu.view(N, C, 1, 1).expand_as(_input) * self.mu_multiplier
             mu = mu.clamp(-1.0, 1.0)
             sigma = sigma.view(N, C, 1, 1).expand_as(_input) * self.sigma_multiplier
@@ -50,4 +52,3 @@ class FiLM_Layer(nn.Module):
 
         return _input * (1.0 + mu) + sigma
         # return _input * (1.0 + mu) + sigma
-

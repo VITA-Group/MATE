@@ -16,7 +16,10 @@ from models.protonet_embedding import ProtoNetEmbedding
 from models.ResNet12_embedding import resnet12
 from models.ResNet12_FiLM_embedding import resnet12_film
 from models.task_embedding import TaskEmbedding
-from models.postprocessing import Identity, PostProcessingNet, PostProcessingNetConv1d, PostProcessingNetConv1d_SelfAttn
+from models.postprocessing import Identity, PostProcessingNet, \
+    PostProcessingNetConv1d, PostProcessingNetConv1d_SelfAttn
+from models.loss import get_film_loss
+
 
 from utils import set_gpu, Timer, count_accuracy, count_accuracies, check_dir, log
 
@@ -129,18 +132,10 @@ def get_postprocessing_model(options):
         return PostProcessingNet(dataset=options.dataset, task_embedding=options.task_embedding).cuda()
     if options.post_processing == 'Conv1d':
         postprocessing_net = PostProcessingNetConv1d().cuda()
-        # if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
-        #     device_ids = list(range(len(options.gpu.split(','))))
-        #     postprocessing_net = torch.nn.DataParallel(postprocessing_net, device_ids=device_ids)
         device_ids = list(range(len(options.gpu.split(','))))
         postprocessing_net = torch.nn.DataParallel(postprocessing_net, device_ids=device_ids)
         return postprocessing_net
     if options.post_processing == 'Conv1d_SelfAttn':
-        # if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
-        #     skip_attn1 = True
-        #     print('First attention skipped')
-        # else:
-        #     skip_attn1 = False
         postprocessing_net = PostProcessingNetConv1d_SelfAttn(dataset=options.dataset).cuda()
         device_ids = list(range(len(options.gpu.split(','))))
         postprocessing_net = torch.nn.DataParallel(postprocessing_net, device_ids=device_ids)
@@ -201,6 +196,10 @@ if __name__ == '__main__':
                             help='Regularization term of l1 norm of WGrad')
     parser.add_argument('--wgrad-prune-ratio', type=float, default=0.0,
                             help='Pruning ratio of the gradient of w')
+    parser.add_argument('--film-reg-type', type=str, default='None',
+                            help='Regularization on FiLM layers')
+    parser.add_argument('--film-reg-level', type=float, default=0.0,
+                            help='Coefficient of the regularization term')
 
     opt = parser.parse_args()
 
@@ -331,7 +330,6 @@ if __name__ == '__main__':
                 loss_ortho_reg = ((gram * mask) ** 2.0).sum()
             else:
                 loss_ortho_reg = 0.0
-            # loss_ortho_reg = 0.0
 
             # if opt.wgrad_l1_reg > 0 and G is not None:
             #     loss_wgrad_l1_reg = G.sum()
@@ -340,30 +338,36 @@ if __name__ == '__main__':
 
             # Forward pass for support samples with task embeddings
             if emb_task is not None:
-                emb_task_support_batch = emb_task.expand(-1, train_n_support, -1)
+                # emb_task_support_batch = emb_task.expand(-1, train_n_support, -1)
                 emb_support = embedding_net(
                     data_support.reshape([-1] + list(data_support.shape[-3:])),
-                    task_embedding=emb_task_support_batch.reshape(-1, emb_task.size(-1))
+                    # emb_task_support_batch.reshape(-1, emb_task.size(-1)),
+                    task_embedding = emb_task,
+                    n_expand = train_n_support
                 )
             else:
                 emb_support = embedding_net(
                     data_support.reshape([-1] + list(data_support.shape[-3:])),
-                    task_embedding=None
+                    task_embedding = None,
+                    n_expand = None
                 )
             # emb_support = postprocessing_net(emb_support.reshape([-1] + list(emb_support.size()[2:])))
             emb_support = emb_support.reshape(opt.episodes_per_batch, train_n_support, -1)
 
             # Forward pass for query samples with task embeddings
             if emb_task is not None:
-                emb_task_query_batch = emb_task.expand(-1, train_n_query, -1)
+                # emb_task_query_batch = emb_task.expand(-1, train_n_query, -1)
                 emb_query = embedding_net(
                     data_query.reshape([-1] + list(data_query.shape[-3:])),
-                    task_embedding=emb_task_query_batch.reshape(-1, emb_task.size(-1))
+                    # emb_task_query_batch.reshape(-1, emb_task.size(-1))
+                    task_embedding = emb_task,
+                    n_expand = train_n_query
                 )
             else:
                 emb_query = embedding_net(
                     data_query.reshape([-1] + list(data_query.shape[-3:])),
-                    task_embedding=None
+                    task_embedding = None,
+                    n_expand = None
                 )
             # emb_query = postprocessing_net(emb_query.reshape([-1] + list(emb_query.size()[2:])))
             emb_query = emb_query.reshape(opt.episodes_per_batch, train_n_query, -1)
@@ -381,6 +385,11 @@ if __name__ == '__main__':
                 log_prb_none = F.log_softmax(logit_query_none.reshape(-1, opt.train_way), dim=1)
                 loss_none = -(smoothed_one_hot * log_prb_none).sum(dim=1).mean()
                 loss = loss_none * alpha + loss * (1-alpha)
+
+            # FiLM regularization
+            loss_film_reg = get_film_loss(embedding_net, opt.film_reg_type)
+            loss += opt.film_reg_level * loss_film_reg
+
             # loss += opt.orthogonal_reg * loss_ortho_reg
             # loss += opt.orthogonal_reg * loss_ortho_reg + opt.wgrad_l1_reg * loss_wgrad_l1_reg
 
@@ -429,30 +438,34 @@ if __name__ == '__main__':
 
             # Forward pass for support samples with task embeddings
             if emb_task is not None:
-                emb_task_support_batch = emb_task.expand(-1, test_n_support, -1)
+                # emb_task_support_batch = emb_task.expand(-1, test_n_support, -1)
                 emb_support = embedding_net(
                     data_support.reshape([-1] + list(data_support.shape[-3:])),
-                    task_embedding=emb_task_support_batch.reshape(-1, emb_task.size(-1))
+                    task_embedding = emb_task,
+                    n_expand = test_n_support
                 )
             else:
                 emb_support = embedding_net(
                     data_support.reshape([-1] + list(data_support.shape[-3:])),
-                    task_embedding=None
+                    task_embedding = None,
+                    n_expand = None
                 )
             # emb_support = postprocessing_net(emb_support.reshape([-1] + list(emb_support.size()[2:])))
             emb_support = emb_support.reshape(opt.val_episodes_per_batch, test_n_support, -1)
 
             # Forward pass for query samples with task embeddings
             if emb_task is not None:
-                emb_task_query_batch = emb_task.expand(-1, test_n_query, -1)
+                # emb_task_query_batch = emb_task.expand(-1, test_n_query, -1)
                 emb_query = embedding_net(
                     data_query.reshape([-1] + list(data_query.shape[-3:])),
-                    task_embedding=emb_task_query_batch.reshape(-1, emb_task.size(-1))
+                    task_embedding = emb_task,
+                    n_expand = test_n_query
                 )
             else:
                 emb_query = embedding_net(
                     data_query.reshape([-1] + list(data_query.shape[-3:])),
-                    task_embedding=None
+                    task_embedding = None,
+                    n_expand = None
                 )
             # emb_query = postprocessing_net(emb_query.reshape([-1] + list(emb_query.size()[2:])))
             emb_query = emb_query.reshape(opt.val_episodes_per_batch, test_n_query, -1)

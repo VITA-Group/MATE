@@ -811,4 +811,3 @@ def MetaOptNetHead_SVM_CS_WNorm(query, support, support_labels, n_way, n_shot, C
     wnorm = torch.sum(w, dim=(1,2)) # (tasks_per_batch, n_way)
 
     return logits, wnorm
-

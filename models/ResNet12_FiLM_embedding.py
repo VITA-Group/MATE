@@ -58,31 +58,31 @@ class BasicBlockFiLM(nn.Module):
         self.DropBlock = DropBlock(block_size=self.block_size)
 
 
-    def forward(self, x, task_embedding):
+    def forward(self, x, task_embedding, n_expand):
         self.num_batches_tracked += 1
 
         residual = x
 
         out = self.conv1(x)
         out = self.bn1(out, task_embedding) if self.dual_BN else self.bn1(out)
-        out = self.film1(out, task_embedding)
+        out = self.film1(out, task_embedding, n_expand)
         out = self.relu(out)
 
         out = self.conv2(out)
         out = self.bn2(out, task_embedding) if self.dual_BN else self.bn2(out)
-        out = self.film2(out, task_embedding)
+        out = self.film2(out, task_embedding, n_expand)
         out = self.relu(out)
 
         out = self.conv3(out)
         out = self.bn3(out, task_embedding) if self.dual_BN else self.bn3(out)
-        out = self.film3(out, task_embedding)
+        out = self.film3(out, task_embedding, n_expand)
 
         # if self.downsample is not None:
         #     residual = self.downsample(x)
         if self.downsample:
             residual = self.conv_ds(x)
             residual = self.bn_ds(residual, task_embedding) if self.dual_BN else self.bn_ds(residual)
-            residual = self.film_ds(residual, task_embedding)
+            residual = self.film_ds(residual, task_embedding, n_expand)
 
         out += residual
         out = self.relu(out)
@@ -159,11 +159,11 @@ class ResNet_FiLM(nn.Module):
         # return nn.Sequential(*layers)
         return layers
 
-    def forward(self, x, task_embedding):
-        x = self.layer1(x, task_embedding)
-        x = self.layer2(x, task_embedding)
-        x = self.layer3(x, task_embedding)
-        x = self.layer4(x, task_embedding)
+    def forward(self, x, task_embedding, n_expand):
+        x = self.layer1(x, task_embedding, n_expand)
+        x = self.layer2(x, task_embedding, n_expand)
+        x = self.layer3(x, task_embedding, n_expand)
+        x = self.layer4(x, task_embedding, n_expand)
         if self.keep_avg_pool:
             x = self.avgpool(x)
         x = x.view(x.size(0), -1)
@@ -175,4 +175,3 @@ def resnet12_film(keep_prob=1.0, avg_pool=False, **kwargs):
     """
     model = ResNet_FiLM(BasicBlockFiLM, keep_prob=keep_prob, avg_pool=avg_pool, **kwargs)
     return model
-

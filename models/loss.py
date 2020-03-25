@@ -5,15 +5,15 @@ import numpy as np
 from .FiLM import FiLM_Layer
 
 
-def get_film_loss(model, task_emb, loss_type):
+def get_film_loss(model, _task_emb, loss_type):
     if 'none' in loss_type.lower():
         return 0.0
     elif 'ortho' in loss_type.lower():
-        return get_film_srip_loss(model)
+        return get_film_srip_loss(model, _task_emb)
     elif 'msgan' in loss_type.lower():
-        return get_film_msgan_loss(model)
+        return get_film_msgan_loss(model, _task_emb)
     elif 'dsgan' in loss_type.lower():
-        return get_film_dsgan_loss(model)
+        return get_film_dsgan_loss(model, _task_emb)
     else:
         raise ValueError('Invalid `loss_type` for FiLM regularization')
 

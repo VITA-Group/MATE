@@ -281,6 +281,8 @@ if __name__ == '__main__':
 
     for epoch in range(last_epoch + 2, opt.num_epoch + 1):
         # Train on the training split
+        # Learning rate decay
+        lr_scheduler.step()
 
         # Fetch the current epoch's learning rate
         epoch_learning_rate = 0.1
@@ -553,6 +555,3 @@ if __name__ == '__main__':
 
         # empty cache
         torch.cuda.empty_cache()
-
-        # Learning rate decay
-        lr_scheduler.step()

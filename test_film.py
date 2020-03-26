@@ -219,7 +219,11 @@ if __name__ == '__main__':
         n_support = opt.way * opt.shot
         n_query = opt.way * opt.query
 
-        emb_support = embedding_net(data_support.reshape([-1] + list(data_support.shape[-3:])), None)
+        emb_support = embedding_net(
+            data_support.reshape([-1] + list(data_support.shape[-3:])),
+            task_embedding = None,
+            n_expand = None
+        )
         emb_support = emb_support.reshape(1, n_support, -1)
 
         # emb_query = embedding_net(data_query.reshape([-1] + list(data_query.shape[-3:])))

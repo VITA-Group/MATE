@@ -256,15 +256,17 @@ if __name__ == '__main__':
 
         # Forward pass for query samples with task embeddings
         if emb_task is not None:
-            emb_task_query_batch = emb_task.expand(-1, n_query, -1)
+            # emb_task_query_batch = emb_task.expand(-1, n_query, -1)
             emb_query = embedding_net(
                 data_query.reshape([-1] + list(data_query.shape[-3:])),
-                task_embedding=emb_task_query_batch.reshape(-1, emb_task.size(-1))
+                task_embedding = emb_task,
+                n_expand = n_query
             )
         else:
             emb_query = embedding_net(
                 data_query.reshape([-1] + list(data_query.shape[-3:])),
-                task_embedding=None
+                task_embedding = None,
+                n_expand = None
             )
         # emb_query = postprocessing_net(emb_query.reshape([-1] + list(emb_query.size()[2:])))
         emb_query = emb_query.reshape(1, n_query, -1)

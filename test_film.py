@@ -229,13 +229,19 @@ if __name__ == '__main__':
         # emb_query = embedding_net(data_query.reshape([-1] + list(data_query.shape[-3:])))
         # emb_query = emb_query.reshape(1, n_query, -1)
 
+        if i > 1:
+            last_emb_task = emb_task
         assert('FiLM' in opt.task_embedding)
         emb_task, _ = add_te_func(
             emb_support, labels_support, opt.way, opt.shot, opt.wgrad_prune_ratio)
         if 'imagenet' in opt.dataset.lower():
             emb_task = film_preprocess(emb_task.squeeze(1)).unsqueeze(1)
-        # print(emb_task)
+        # print(emb_task[0,0,:30])
         # print(emb_task * 10**5)
+        # if i > 1:
+        #     print(F.cosine_similarity(
+        #         last_emb_task.squeeze(1),
+        #         emb_task.squeeze(1)))
 
         # Forward pass for support samples with task embeddings
         if emb_task is not None:

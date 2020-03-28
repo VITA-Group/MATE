@@ -404,7 +404,8 @@ if __name__ == '__main__':
             )
             loss += opt.film_reg_level * loss_film_reg
 
-            # loss += opt.orthogonal_reg * loss_ortho_reg
+            # print(loss_ortho_reg)
+            loss += opt.orthogonal_reg * loss_ortho_reg
             # loss += opt.orthogonal_reg * loss_ortho_reg + opt.wgrad_l1_reg * loss_wgrad_l1_reg
 
             acc = count_accuracy(logit_query.reshape(-1, opt.train_way), labels_query.reshape(-1))

@@ -200,6 +200,8 @@ if __name__ == '__main__':
                             help='Regularization on FiLM layers')
     parser.add_argument('--film-reg-level', type=float, default=0.0,
                             help='Coefficient of the regularization term')
+    parser.add_argument('--fix-film', action='store_true',
+                            help='Fix FiLM layers in training')
 
     opt = parser.parse_args()
 
@@ -245,13 +247,24 @@ if __name__ == '__main__':
         film_preprocess = nn.Linear(16000, 2560, False).cuda()
 
     params = [
-        {'params': embedding_net.parameters()},
+        # {'params': embedding_net.parameters()},
         {'params': cls_head.parameters()},
         {'params': add_te_func.parameters()},
         {'params': postprocessing_net.parameters()}
     ]
+
+    if opt.fix_film:
+        param_list = []
+        for param in embedding_net.parameters():
+            if len(param.size()) != 2:
+                param_list.append(param)
+    else:
+        param_list = embedding_net.parameters()
+    params.append({'params': param_list})
+
     if 'imagenet' in opt.dataset.lower() and 'film' in opt.task_embedding.lower():
         params.append({'params': film_preprocess.parameters()})
+
     optimizer = torch.optim.SGD(
         params, lr=0.1, momentum=0.9, weight_decay=5e-4, nesterov=True)
 

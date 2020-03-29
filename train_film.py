@@ -247,20 +247,11 @@ if __name__ == '__main__':
         film_preprocess = nn.Linear(16000, 2560, False).cuda()
 
     params = [
-        # {'params': embedding_net.parameters()},
+        {'params': embedding_net.parameters()},
         {'params': cls_head.parameters()},
         {'params': add_te_func.parameters()},
         {'params': postprocessing_net.parameters()}
     ]
-
-    if opt.fix_film:
-        param_list = []
-        for param in embedding_net.parameters():
-            if len(param.size()) != 2:
-                param_list.append(param)
-    else:
-        param_list = embedding_net.parameters()
-    params.append({'params': param_list})
 
     if 'imagenet' in opt.dataset.lower() and 'film' in opt.task_embedding.lower():
         params.append({'params': film_preprocess.parameters()})
@@ -283,6 +274,13 @@ if __name__ == '__main__':
             optimizer.load_state_dict(saved_models['optimizer'])
     else:
         last_epoch = -1
+
+    if opt.fix_film:
+        new_param_list = [
+            param for param in optimizer.param_groups[0]['params'] \
+                if len(param.size()) != 2
+        ]
+        optimizer.param_groups[0]['params'] = new_param_list
 
     lambda_epoch = lambda e: 1.0 if e < 20 else (0.06 if e < 40 else 0.012 if e < 50 else (0.0024))
     lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_epoch, last_epoch=last_epoch)

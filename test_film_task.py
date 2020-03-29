@@ -258,7 +258,7 @@ if __name__ == '__main__':
 
         # Forward pass for support samples with task embeddings
         if emb_task is not None:
-            task_embeddings.append(emb_task.squeeze(1))
+            task_embeddings.append(emb_task.squeeze(1).detach().cpu().numpy())
             # emb_task_support_batch = emb_task.expand(1, n_support, -1)
             emb_support = embedding_net(
                 data_support.reshape([-1] + list(data_support.shape[-3:])),
@@ -312,5 +312,5 @@ if __name__ == '__main__':
                   .format(i, opt.episode, avg, ci95, acc))
 
     # Save task embeddings to disk
-    task_embeddings = torch.cat(task_embeddings, dim=0).detach().cpu().numpy()
+    task_embeddings = np.concatenate(task_embeddings, axis=0)
     np.save(opt.save_file, task_embeddings)

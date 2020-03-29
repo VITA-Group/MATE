@@ -262,7 +262,7 @@ if __name__ == '__main__':
         for (id_m, m) in enumerate(embedding_net.modules(), start = 0):
             if isinstance(m, FiLM_Layer):
                 film_out = m.get_mlp_output(emb_task).squeeze(1)
-                film_outputs[id_m].append(film_out)
+                film_outputs[id_m].append(film_out.detach().cpu().numpy())
 
         # Forward pass for support samples with task embeddings
         if emb_task is not None:
@@ -319,7 +319,7 @@ if __name__ == '__main__':
                   .format(i, opt.episode, avg, ci95, acc))
 
     for i, i_film_outputs in enumerate(film_outputs):
-        i_film_outputs = torch.cat(i_film_outputs, dim=0).detach().cpu().numpy()
+        i_film_outputs = np.concatenate(i_film_outputs, axis=0)
         np.save(
             os.path.join(opt.savedir, 'film_out_{id}'.format(id = i+1)),
             i_film_outputs

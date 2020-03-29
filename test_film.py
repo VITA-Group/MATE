@@ -13,7 +13,7 @@ from tqdm import tqdm
 from models.protonet_embedding import ProtoNetEmbedding
 from models.R2D2_embedding import R2D2Embedding
 from models.ResNet12_embedding import resnet12
-from models.ResNet12_FiLM_embedding import resnet12_film
+from models.ResNet12_FiLM_embedding import resnet12_film, ResNet_FiLM
 from models.task_embedding import TaskEmbedding
 from models.postprocessing import Identity, PostProcessingNet, PostProcessingNetConv1d, PostProcessingNetConv1d_SelfAttn
 
@@ -209,6 +209,16 @@ if __name__ == '__main__':
         postprocessing_net.eval()
     if 'film_preprocess' in saved_models.keys():
         film_preprocess.load_state_dict(saved_models['film_preprocess'])
+
+    # for m in embedding_net.modules():
+    #     # print(type(m))
+    #     if isinstance(m, ResNet_FiLM):
+    #         for mm in m.children():
+    #             print(type(mm))
+    for param in embedding_net.parameters():
+        if len(param.size()) == 2 and param.size(-1) == 2560:
+            print(param.size())
+    exit()
 
     # Evaluate on test set
     test_accuracies = []

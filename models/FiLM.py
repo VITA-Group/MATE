@@ -37,6 +37,12 @@ class FiLM_Layer(nn.Module):
         if _task_emb is not None:
             _task_emb = _task_emb.squeeze(1)
             _out = self.MLP(_task_emb)
+            # if True:
+            #     mu, sigma = torch.split(
+            #         _out, [self.channels, self.channels], dim=-1)
+            #     # print(_task_emb[:2,10:20])
+            #     # print(mu[:2,:10])
+            #     # print(sigma[:2,:5])
             self._out = _out.unsqueeze(1)
             _out = self._out.expand(-1, n_expand, -1).reshape(-1, self._out.size(-1))
 
@@ -48,7 +54,9 @@ class FiLM_Layer(nn.Module):
             mu = mu.view(N, C, 1, 1).expand_as(_input) * self.mu_multiplier
             mu = mu.clamp(-1.0, 1.0)
             sigma = sigma.view(N, C, 1, 1).expand_as(_input) * self.sigma_multiplier
-            # print(_input.abs().mean().cpu().item(), mu.abs().mean().cpu().item(), sigma.abs().mean().cpu().item())
+            # print(mu.abs().mean().cpu().item(), sigma.abs().mean().cpu().item())
+            # print(mu[:2,:5,0,0])
+            # print(sigma[:2,:5,0,0])
             # print(mu.size(), sigma.size())
             # print(mu[0,:,0,0], sigma[0,:,0,0])
             # print(self.mu_multiplier, self.sigma_multiplier)

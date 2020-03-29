@@ -159,9 +159,13 @@ if __name__ == '__main__':
                             help='use an extra post processing net for sample embeddings')
     parser.add_argument('--dual-BN', action='store_true',
                             help='Use dual BN together with FiLM layers')
+    parser.add_argument('--savedir', type=str, help='directory to save generated features')
 
     opt = parser.parse_args()
     (dataset_test, data_loader) = get_dataset(opt)
+
+    if not os.path.isdir(opt.savedir):
+        os.mkdir(opt.savedir)
 
     dloader_test = data_loader(
         dataset=dataset_test,
@@ -273,7 +277,7 @@ if __name__ == '__main__':
             labels_support=labels_support_np,
             labels_query=labels_query_np, Kall=Kall_np
         )
-        np.savez('./emb_entropy_visual/eps_{}.npz'.format(i), **d)
+        np.savez(os.path.join(opt.savedir, 'eps_{}.npz'.format(i)), **d)
         continue
 
         # emb_support = postprocessing_net(emb_support)

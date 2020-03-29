@@ -16,6 +16,7 @@ from models.ResNet12_embedding import resnet12
 from models.ResNet12_FiLM_embedding import resnet12_film, ResNet_FiLM
 from models.task_embedding import TaskEmbedding
 from models.postprocessing import Identity, PostProcessingNet, PostProcessingNetConv1d, PostProcessingNetConv1d_SelfAttn
+from models.FiLM import FiLM_Layer
 
 from models.classification_heads import ClassificationHead
 
@@ -23,7 +24,6 @@ from utils import pprint, set_gpu, Timer, count_accuracy, log
 
 import numpy as np
 import os
-
 
 def get_model(options):
     # Choose the embedding network
@@ -56,8 +56,8 @@ def get_model(options):
         device_ids = list(range(len(options.gpu.split(','))))
         network = torch.nn.DataParallel(network, device_ids=device_ids)
     else:
-        print("Cannot recognize the network type")
-        assert False
+        print ("Cannot recognize the network type")
+        assert(False)
 
     # Choose the classification head
     if opt.head == 'ProtoNet':
@@ -71,11 +71,10 @@ def get_model(options):
     elif options.head == 'SVM-BiP':
         cls_head = ClassificationHead(base_learner='SVM-CS-BiP').cuda()
     else:
-        print("Cannot recognize the classification head type")
-        assert False
+        print ("Cannot recognize the classification head type")
+        assert(False)
 
-    return network, cls_head
-
+    return (network, cls_head)
 
 def get_dataset(options):
     # Choose the embedding network
@@ -101,7 +100,6 @@ def get_dataset(options):
 
     return (dataset_test, data_loader)
 
-
 def get_task_embedding_func(options):
     # Choose the task embedding function
     te_args = dict(dataset=options.dataset) if options.task_embedding == 'Relation' else dict()
@@ -111,7 +109,6 @@ def get_task_embedding_func(options):
     te_func = torch.nn.DataParallel(te_func, device_ids=device_ids)
 
     return te_func
-
 
 def get_postprocessing_model(options):
     # Choose the post processing network for embeddings
@@ -144,7 +141,7 @@ if __name__ == '__main__':
     parser.add_argument('--gpu', default='0')
     parser.add_argument('--load', default='./experiments/exp_1/best_model.pth',
                             help='path of the checkpoint file')
-    parser.add_argument('--episode', type=int, default=1000,
+    parser.add_argument('--episode', type=int, default=100,
                             help='number of episodes to test')
     parser.add_argument('--way', type=int, default=5,
                             help='number of classes in one test episode')
@@ -171,6 +168,8 @@ if __name__ == '__main__':
                             help='Use dual BN together with FiLM layers')
     parser.add_argument('--wgrad-prune-ratio', type=float, default=0.0,
                             help='Pruning ratio of the gradient of w')
+    parser.add_argument('--savedir', type=str, default='saved_film_output',
+                            help='Directory that the film output will be saved to')
 
     opt = parser.parse_args()
     (dataset_test, data_loader) = get_dataset(opt)
@@ -226,6 +225,9 @@ if __name__ == '__main__':
 
     # Evaluate on test set
     test_accuracies = []
+    film_outputs = [
+        [] for m in embedding_net.modules() if isinstance(m, FiLM_Layer)
+    ]
     for i, batch in enumerate(tqdm(dloader_test()), 1):
         data_support, labels_support, data_query, labels_query, _, _ = [x.cuda() for x in batch]
         # print(labels_support)
@@ -256,6 +258,11 @@ if __name__ == '__main__':
         #     print(F.cosine_similarity(
         #         last_emb_task.squeeze(1),
         #         emb_task.squeeze(1)))
+
+        for (id_m, m) in enumerate(embedding_net.modules(), start = 0):
+            if isinstance(m, FiLM_Layer):
+                film_out = m.get_mlp_output(emb_task).squeeze(1)
+                film_outputs[id_m].append(film_out)
 
         # Forward pass for support samples with task embeddings
         if emb_task is not None:
@@ -310,3 +317,10 @@ if __name__ == '__main__':
         if i % 50 == 0:
             log(log_file_path, 'Episode [{}/{}]:\t\t\tAccuracy: {:.2f} ± {:.2f} % ({:.2f} %)'\
                   .format(i, opt.episode, avg, ci95, acc))
+
+    for i, i_film_outputs in enumerate(film_outputs):
+        i_film_outputs = torch.cat(i_film_outputs, dim=0).detach().cpu().numpy()
+        np.save(
+            os.path.join(opt.savedir, 'film_out_{id}'.format(id = i+1)),
+            i_film_outputs
+        )

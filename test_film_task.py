@@ -24,7 +24,6 @@ from utils import pprint, set_gpu, Timer, count_accuracy, log
 import numpy as np
 import os
 
-
 def get_model(options):
     # Choose the embedding network
     if options.network == 'ProtoNet':
@@ -56,8 +55,8 @@ def get_model(options):
         device_ids = list(range(len(options.gpu.split(','))))
         network = torch.nn.DataParallel(network, device_ids=device_ids)
     else:
-        print("Cannot recognize the network type")
-        assert False
+        print ("Cannot recognize the network type")
+        assert(False)
 
     # Choose the classification head
     if opt.head == 'ProtoNet':
@@ -71,11 +70,10 @@ def get_model(options):
     elif options.head == 'SVM-BiP':
         cls_head = ClassificationHead(base_learner='SVM-CS-BiP').cuda()
     else:
-        print("Cannot recognize the classification head type")
-        assert False
+        print ("Cannot recognize the classification head type")
+        assert(False)
 
-    return network, cls_head
-
+    return (network, cls_head)
 
 def get_dataset(options):
     # Choose the embedding network
@@ -101,7 +99,6 @@ def get_dataset(options):
 
     return (dataset_test, data_loader)
 
-
 def get_task_embedding_func(options):
     # Choose the task embedding function
     te_args = dict(dataset=options.dataset) if options.task_embedding == 'Relation' else dict()
@@ -111,7 +108,6 @@ def get_task_embedding_func(options):
     te_func = torch.nn.DataParallel(te_func, device_ids=device_ids)
 
     return te_func
-
 
 def get_postprocessing_model(options):
     # Choose the post processing network for embeddings
@@ -144,7 +140,7 @@ if __name__ == '__main__':
     parser.add_argument('--gpu', default='0')
     parser.add_argument('--load', default='./experiments/exp_1/best_model.pth',
                             help='path of the checkpoint file')
-    parser.add_argument('--episode', type=int, default=1000,
+    parser.add_argument('--episode', type=int, default=100,
                             help='number of episodes to test')
     parser.add_argument('--way', type=int, default=5,
                             help='number of classes in one test episode')
@@ -171,6 +167,8 @@ if __name__ == '__main__':
                             help='Use dual BN together with FiLM layers')
     parser.add_argument('--wgrad-prune-ratio', type=float, default=0.0,
                             help='Pruning ratio of the gradient of w')
+    parser.add_argument('--save-file', type=str, default='task_embedding.npy',
+                            help='File name that the task embeddings will be saved to')
 
     opt = parser.parse_args()
     (dataset_test, data_loader) = get_dataset(opt)
@@ -225,6 +223,7 @@ if __name__ == '__main__':
     # exit()
 
     # Evaluate on test set
+    task_embeddings = []
     test_accuracies = []
     for i, batch in enumerate(tqdm(dloader_test()), 1):
         data_support, labels_support, data_query, labels_query, _, _ = [x.cuda() for x in batch]
@@ -259,6 +258,7 @@ if __name__ == '__main__':
 
         # Forward pass for support samples with task embeddings
         if emb_task is not None:
+            task_embeddings.append(emb_task.squeeze(1))
             # emb_task_support_batch = emb_task.expand(1, n_support, -1)
             emb_support = embedding_net(
                 data_support.reshape([-1] + list(data_support.shape[-3:])),
@@ -310,3 +310,7 @@ if __name__ == '__main__':
         if i % 50 == 0:
             log(log_file_path, 'Episode [{}/{}]:\t\t\tAccuracy: {:.2f} ± {:.2f} % ({:.2f} %)'\
                   .format(i, opt.episode, avg, ci95, acc))
+
+    # Save task embeddings to disk
+    task_embeddings = torch.cat(task_embeddings, dim=0).detach().cpu().numpy()
+    np.save(opt.save_file, task_embeddings)

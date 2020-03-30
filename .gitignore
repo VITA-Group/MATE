@@ -3,6 +3,7 @@
 
 # Python cache
 **/__pycache__
+**/*.pyc
 
 # Experiment logs
 experiments

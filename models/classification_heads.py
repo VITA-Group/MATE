@@ -1,5 +1,6 @@
 import os
 import sys
+import ipdb
 
 import torch
 from torch.autograd import Variable
@@ -24,33 +25,51 @@ def computeGramMatrix(A, B):
 
     return torch.bmm(A, B.transpose(1,2))
 
-# def computeOuterProduct(A, dim):
-#     """
-#     Compute the outer product of tensor `A` along a given dimension.
-#     Say the shape of `A` is (..., dim, ...). This function will insert a new
-#     dimension after `dim`, i.e. (..., dim, 1, ...). The the outer product is
-#     computed, resulting in output of shape (..., dim, dim, ...).
-#
-#     Parameters:
-#       A  : a (..., dim, ...) Tensor.
-#       dim: an integer.
-#     Returns: a (..., dim, dim, ...) Tensor.
-#     """
-#     ndim, shape = A.dim(), A.size()
-#     d = shape[dim]
-#     # Rotate `dim` to the last dimension
-#     Ap = A.permute(*range(dim), *range(dim+1,ndim), dim)
-#     # Merge all dimensions but the last one and append a new dimension
-#     Ap = A.reshape(-1, d).unsqueeze(-1)
-#     # Compute the outer product and reshape the former dimensions
-#     output = torch.bmm(Ap, Ap.transpose(1,2)) # (-1, d, d)
-#     output = output.reshape(*shape[:dim], *shape[dim+1:], d, d)
-#     # Permute the last two dimensions to the previous location
-#     # 0   1   ... dim       dim+1     ...  ndim-2    ndim-1  ndim
-#     # s0  s1  ... s[dim+1]  s[dim+2]  ...  s[dim-1]  d       d
-#     output = output.permute(*range(dim), ndim-1, ndim, *range(dim,ndim-1))
-#
-#     return output
+def computeOuterProduct(A, dim):
+    """
+    Compute the outer product of tensor `A` along a given dimension.
+    Say the shape of `A` is (..., dim, ...). This function will insert a new
+    dimension after `dim`, i.e. (..., dim, 1, ...). The the outer product is
+    computed, resulting in output of shape (..., dim, dim, ...).
+
+    Parameters:
+      A  : a (..., dim, ...) Tensor.
+      dim: an integer.
+    Returns: a (..., dim, dim, ...) Tensor.
+    """
+    assert(A.dim() == 3)
+    ndim, shape = A.dim(), A.size()
+    d = shape[dim]
+
+    # Rotate `dim` to the last dimension
+    # Ap = A.permute(*range(dim), *range(dim+1,ndim), dim)
+    if dim == 0:
+        Ap = A.permute(1, 2, 0)
+    elif dim == 1:
+        Ap = A.permute(0, 2, 1)
+    else:
+        pass
+
+    # Merge all dimensions but the last one and append a new dimension
+    temp_s0, temp_s1, _ = Ap.size()
+    Ap = A.reshape(-1, d).unsqueeze(-1)
+
+    # Compute the outer product and reshape the former dimensions
+    output = torch.bmm(Ap, Ap.transpose(1,2)) # (-1, d, d)
+    output = output.reshape(temp_s0, temp_s1, d, d)
+
+    # Permute the last two dimensions to the previous location
+    # 0   1   ... dim       dim+1     ...  ndim-2    ndim-1  ndim
+    # s0  s1  ... s[dim+1]  s[dim+2]  ...  s[dim-1]  d       d
+    # output = output.permute(*range(dim), ndim-1, ndim, *range(dim,ndim-1))
+    if dim == 0:
+        output = output.permute(2, 3, 0, 1)
+    elif dim == 1:
+        output = output.permute(0, 2, 3, 1)
+    else:
+        pass
+
+    return output
 
 def computeBiPoolingGramMatrix(A, B):
     """
@@ -747,6 +766,9 @@ def MetaOptNetHead_SVM_CS_WNorm(query, support, support_labels, n_way, n_shot, C
     #C^m_i = 0 if m != y_i.
     #This borrows the notation of liblinear.
 
+    # ipdb.set_trace()
+    # ipdb.set_trace(context=5)
+
     #\alpha is an (n_support, n_way) matrix
     kernel_matrix = computeGramMatrix(support, support)
 
@@ -805,6 +827,8 @@ def MetaOptNetHead_SVM_CS_WNorm(query, support, support_labels, n_way, n_shot, C
     logits = torch.sum(logits, 1)
 
     # Compute the norm of `w` parameters
+    # ipdb.set_trace()
+    # ipdb.set_trace(context=5)
     qp_sol_outer_product = computeOuterProduct(qp_sol, dim=1) # (tasks_per_batch, n_support, n_support, n_way)
     kernel_matrix_expand = kernel_matrix.unsqueeze(3).expand(tasks_per_batch, n_support, n_support, n_way)
     w = qp_sol_outer_product * kernel_matrix_expand

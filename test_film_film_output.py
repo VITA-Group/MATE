@@ -259,10 +259,12 @@ if __name__ == '__main__':
         #         last_emb_task.squeeze(1),
         #         emb_task.squeeze(1)))
 
-        for (id_m, m) in enumerate(embedding_net.modules(), start = 0):
+        id_m = 0
+        for m in embedding_net.modules():
             if isinstance(m, FiLM_Layer):
                 film_out = m.get_mlp_output(emb_task).squeeze(1)
                 film_outputs[id_m].append(film_out.detach().cpu().numpy())
+                id_m += 1
 
         # Forward pass for support samples with task embeddings
         if emb_task is not None:

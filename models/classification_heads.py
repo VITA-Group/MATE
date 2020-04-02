@@ -131,7 +131,14 @@ def one_hot(indices, depth):
 def batched_kronecker(matrix1, matrix2):
     matrix1_flatten = matrix1.reshape(matrix1.size()[0], -1)
     matrix2_flatten = matrix2.reshape(matrix2.size()[0], -1)
-    return torch.bmm(matrix1_flatten.unsqueeze(2), matrix2_flatten.unsqueeze(1)).reshape([matrix1.size()[0]] + list(matrix1.size()[1:]) + list(matrix2.size()[1:])).permute([0, 1, 3, 2, 4]).reshape(matrix1.size(0), matrix1.size(1) * matrix2.size(1), matrix1.size(2) * matrix2.size(2))
+    return torch.bmm(matrix1_flatten.unsqueeze(2),
+                     matrix2_flatten.unsqueeze(1)).reshape(
+        [matrix1.size()[0]] + list(matrix1.size()[1:]) + list(matrix2.size()[1:])
+    ).permute([0, 1, 3, 2, 4]).reshape(
+        matrix1.size(0),
+        matrix1.size(1) * matrix2.size(1),
+        matrix1.size(2) * matrix2.size(2)
+    )
 
 def MetaOptNetHead_Ridge(query, support, support_labels, n_way, n_shot, lambda_reg=50.0, double_precision=False):
     """

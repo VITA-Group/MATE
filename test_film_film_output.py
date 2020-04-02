@@ -318,6 +318,8 @@ if __name__ == '__main__':
             log(log_file_path, 'Episode [{}/{}]:\t\t\tAccuracy: {:.2f} ± {:.2f} % ({:.2f} %)'\
                   .format(i, opt.episode, avg, ci95, acc))
 
+    if not os.path.isdir(opt.savedir):
+        os.makedirs(opt.savedir)
     for i, i_film_outputs in enumerate(film_outputs):
         i_film_outputs = np.concatenate(i_film_outputs, axis=0)
         np.save(

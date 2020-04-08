@@ -18,7 +18,7 @@ def get_film_loss(model, task_emb, loss_type):
         raise ValueError('Invalid `loss_type` for FiLM regularization')
 
 
-def get_film_msgan_loss(model, task_emb):
+def get_film_msgan_loss(model, task_emb, detach=True):
     """Short summary.
 
     Parameters
@@ -36,6 +36,8 @@ def get_film_msgan_loss(model, task_emb):
     """
 
     assert task_emb is not None
+    if detach:
+        task_emb = task_emb.detach()
     tasks_per_batch = task_emb.size(0) # (tasks_per_batch, 1, d)
     task_emb_expanded = task_emb.expand(-1, tasks_per_batch, -1)
     film_loss = 0.0
@@ -51,6 +53,7 @@ def get_film_msgan_loss(model, task_emb):
                                   film_out_expanded.transpose(0,1),
                                   p = 1)
             lz = d_output / d_input
+            # print(lz, d_output, d_input)
             eps = 1 * 1e-5
             film_loss += 1 / (lz + eps)
 

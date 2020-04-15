@@ -18,7 +18,7 @@ def get_film_loss(model, task_emb, loss_type):
         raise ValueError('Invalid `loss_type` for FiLM regularization')
 
 
-def get_film_msgan_loss(model, task_emb):
+def get_film_msgan_loss(model, task_emb, normalize=True):
     """Short summary.
 
     Parameters
@@ -42,6 +42,8 @@ def get_film_msgan_loss(model, task_emb):
     for m in model.modules():
         if isinstance(m, FiLM_Layer):
             film_out = m.get_mlp_output(task_emb)
+            # print((film_out**2).sum(1).mean())
+            # print(film_out.abs().sum(1).mean())
             film_out_expanded = film_out.expand(-1, tasks_per_batch, -1)
 
             d_input  = torch.dist(task_emb_expanded,

@@ -59,11 +59,13 @@ def get_model(options):
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=5,
                 film_indim=2560, film_alpha=1.0, film_act=film_act,
+                film_normalize=opt.film_normalize,
                 dual_BN=options.dual_BN).cuda()
         else:
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=2,
                 film_indim=2560, film_alpha=1.0, film_act=film_act,
+                film_normalize=opt.film_normalize,
                 dual_BN=options.dual_BN).cuda()
         device_ids = list(range(len(options.gpu.split(','))))
         network = torch.nn.DataParallel(network, device_ids=device_ids)
@@ -202,6 +204,8 @@ if __name__ == '__main__':
                             help='Coefficient of the regularization term')
     parser.add_argument('--fix-film', action='store_true',
                             help='Fix FiLM layers in training')
+    parser.add_argument('--film-normalize', action='store_true',
+                            help='Normalize the output of FiLM layers')
 
     opt = parser.parse_args()
 

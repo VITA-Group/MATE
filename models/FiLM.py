@@ -5,7 +5,8 @@ import numpy as np
 
 
 class FiLM_Layer(nn.Module):
-    def __init__(self, channels, in_channels=1, alpha=1, activation=F.leaky_relu):
+    def __init__(self, channels, in_channels=1, alpha=1, activation=F.leaky_relu,
+                 normalize=True):
         '''
         input size: (N, in_channels). output size: (N, channels)
 
@@ -18,6 +19,7 @@ class FiLM_Layer(nn.Module):
         self.activation = activation
         self.mu_multiplier = 1.0
         self.sigma_multiplier = 1.0
+        self.normalize = normalize
         self.MLP = nn.Sequential(
             nn.Linear(int(in_channels), int(alpha*channels*2), bias=True),
             nn.LeakyReLU(inplace=True),
@@ -28,6 +30,9 @@ class FiLM_Layer(nn.Module):
         assert _task_emb is not None
         _task_emb = _task_emb.squeeze(1)
         _out = self.MLP(_task_emb)
+        if self.normalize:
+            denom = _out.abs().sum(dim=1, keepdim=True)
+            _out = _out / denom * _out.size(1) * 0.5
         return _out.unsqueeze(1)
 
     def forward(self, _input, _task_emb, n_expand):
@@ -37,6 +42,9 @@ class FiLM_Layer(nn.Module):
         if _task_emb is not None:
             _task_emb = _task_emb.squeeze(1)
             _out = self.MLP(_task_emb)
+            if self.normalize:
+                denom = _out.abs().sum(dim=1, keepdim=True)
+                _out = _out / denom * _out.size(1) * 0.5
             # if True:
             #     mu, sigma = torch.split(
             #         _out, [self.channels, self.channels], dim=-1)

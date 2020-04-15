@@ -131,6 +131,8 @@ def one_hot(indices, depth):
 def batched_kronecker(matrix1, matrix2):
     matrix1_flatten = matrix1.reshape(matrix1.size()[0], -1)
     matrix2_flatten = matrix2.reshape(matrix2.size()[0], -1)
+    # print('matrix1 shape', matrix1.shape)
+    # print('matrix2 shape', matrix2.shape)
     return torch.bmm(matrix1_flatten.unsqueeze(2),
                      matrix2_flatten.unsqueeze(1)).reshape(
         [matrix1.size()[0]] + list(matrix1.size()[1:]) + list(matrix2.size()[1:])
@@ -434,6 +436,9 @@ def MetaOptNetHead_SVM_CS(query, support, support_labels, n_way, n_shot, C_reg=0
     kernel_matrix = computeGramMatrix(support, support)
 
     id_matrix_0 = torch.eye(n_way).expand(tasks_per_batch, n_way, n_way).cuda()
+    # print("")
+    # print("kernel_matrix", kernel_matrix.shape)
+    # print("id_matrix_0", id_matrix_0.shape)
     block_kernel_matrix = batched_kronecker(kernel_matrix, id_matrix_0)
     # This seems to help avoid PSD error from the QP solver.
     block_kernel_matrix += 1.0 * torch.eye(n_way*n_support).expand(tasks_per_batch, n_way*n_support, n_way*n_support).cuda()
@@ -464,6 +469,8 @@ def MetaOptNetHead_SVM_CS(query, support, support_labels, n_way, n_shot, C_reg=0
         G, e, C, h, A, b = [x.double().cuda() for x in [G, e, C, h, A, b]]
     else:
         G, e, C, h, A, b = [x.float().cuda() for x in [G, e, C, h, A, b]]
+
+    # print(G[:25,25:50])
 
     # Solve the following QP to fit SVM:
     #        \hat z =   argmin_z 1/2 z^T G z + e^T z

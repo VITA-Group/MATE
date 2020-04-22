@@ -51,12 +51,14 @@ def get_model(options):
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=5,
                 film_indim=2560, film_alpha=1.0, film_act=film_act,
+                final_relu=(not opt.no_final_relu),
                 film_normalize=opt.film_normalize,
                 dual_BN=options.dual_BN).cuda()
         else:
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=2,
                 film_indim=2560, film_alpha=1.0, film_act=film_act,
+                final_relu=(not opt.no_final_relu),
                 film_normalize=opt.film_normalize,
                 dual_BN=options.dual_BN).cuda()
         device_ids = list(range(len(options.gpu.split(','))))
@@ -180,6 +182,8 @@ if __name__ == '__main__':
                         help='Pruning ratio of the gradient of w')
     parser.add_argument('--film-normalize', action='store_true',
                         help='Normalize the output of FiLM layers')
+    parser.add_argument('--no-final-relu', action='store_true',
+                        help='No final ReLU layer in the backbone')
 
     opt = parser.parse_args()
     (dataset_test, data_loader) = get_dataset(opt)

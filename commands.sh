@@ -25,8 +25,9 @@ python test_film.py --gpu 0 --episode 1000 --way 5 --shot 5 --query 15 --dataset
   --load ./experiments/CIFAR_FS_MetaOptNet_SVM_FiLM-SVM-WGrad_dual-BN_msgan-reg-1e-8_ortho_1e-10/epoch_21.pth
 
 # Test model and save task codes
-python test_film_task.py --gpu 1 \
+python test_film_task.py --gpu 0 \
   --episode 100 --way 5 --shot 5 --query 15 --dataset CIFAR_FS \
-  --head SVM --network ResNet_FiLM --task-embedding FiLM_SVM_WGrad --dual-BN \
-  --load ./experiments/CIFAR_FS_MetaOptNet_SVM_FiLM-SVM-WGrad_dual-BN_msgan-reg-1e-8_ortho_1e-10/epoch_21.pth \
-  --save-file saved-task-emb/msgan-1e-8_ortho-1e-10.npy
+  --head SVM --network ResNet_FiLM \
+  --task-embedding FiLM_SVM_WGrad --film-normalize --dual-BN \
+  --save-file saved-task-emb/msgan-1e-8_ortho-1e-10.npy \
+  --load ./experiments/CIFAR_FS_MetaOptNet_SVM_FiLM-SVM-WGrad_dual-BN_msgan-reg-1e-8_ortho_1e-10/epoch_21.pth

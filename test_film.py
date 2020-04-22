@@ -32,26 +32,32 @@ def get_model(options):
     elif options.network == 'R2D2':
         network = R2D2Embedding().cuda()
     elif options.network == 'ResNet':
-        if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
-            network = resnet12(avg_pool=False, drop_rate=0.1, dropblock_size=5).cuda()
+        if 'imagenet' in options.dataset.lower():
+            network = resnet12(avg_pool=False,
+                               drop_rate=0.1,
+                               dropblock_size=5).cuda()
             # device_ids = list(range(len(options.gpu.split(','))))
             # network = torch.nn.DataParallel(network, device_ids=device_ids)
             # network = torch.nn.DataParallel(network, device_ids=[0, 1, 2, 3])
         else:
-            network = resnet12(avg_pool=False, drop_rate=0.1, dropblock_size=2).cuda()
+            network = resnet12(avg_pool=False,
+                               drop_rate=0.1,
+                               dropblock_size=2).cuda()
         device_ids = list(range(len(options.gpu.split(','))))
         network = torch.nn.DataParallel(network, device_ids=device_ids)
     elif options.network == 'ResNet_FiLM':
         film_act = None if options.no_film_activation else F.leaky_relu
-        if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
+        if 'imagenet' in options.dataset.lower():
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=5,
                 film_indim=2560, film_alpha=1.0, film_act=film_act,
+                film_normalize=opt.film_normalize,
                 dual_BN=options.dual_BN).cuda()
         else:
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=2,
                 film_indim=2560, film_alpha=1.0, film_act=film_act,
+                film_normalize=opt.film_normalize,
                 dual_BN=options.dual_BN).cuda()
         device_ids = list(range(len(options.gpu.split(','))))
         network = torch.nn.DataParallel(network, device_ids=device_ids)
@@ -143,34 +149,37 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--gpu', default='0')
     parser.add_argument('--load', default='./experiments/exp_1/best_model.pth',
-                            help='path of the checkpoint file')
+                        help='path of the checkpoint file')
     parser.add_argument('--episode', type=int, default=1000,
-                            help='number of episodes to test')
+                        help='number of episodes to test')
     parser.add_argument('--way', type=int, default=5,
-                            help='number of classes in one test episode')
+                        help='number of classes in one test episode')
     parser.add_argument('--shot', type=int, default=1,
-                            help='number of support examples per training class')
+                        help='number of support examples per training class')
     parser.add_argument('--query', type=int, default=15,
-                            help='number of query examples per training class')
+                        help='number of query examples per training class')
     parser.add_argument('--network', type=str, default='ProtoNet',
-                            help='choose which embedding network to use.'
-                                 ' ProtoNet, R2D2, ResNet')
+                        help='choose which embedding network to use.'
+                             ' ProtoNet, R2D2, ResNet')
     parser.add_argument('--head', type=str, default='ProtoNet',
-                            help='choose which embedding network to use.'
-                                 ' ProtoNet, Ridge, R2D2, SVM')
+                        help='choose which embedding network to use.'
+                             ' ProtoNet, Ridge, R2D2, SVM')
     parser.add_argument('--dataset', type=str, default='miniImageNet',
-                            help='choose which classification head to use.'
-                                 ' miniImageNet, tieredImageNet, CIFAR_FS, FC100')
+                        help='choose which classification head to use.'
+                             ' miniImageNet, tieredImageNet, CIFAR_FS, FC100')
     parser.add_argument('--task-embedding', type=str, default='None',
-                            help='choose which type of task embedding will be used')
+                        help='choose which type of task embedding will be used')
     parser.add_argument('--post-processing', type=str, default='None',
-                            help='use an extra post processing net for sample embeddings')
+                        help='use an extra post processing net for sample '
+                             'embeddings')
     parser.add_argument('--no-film-activation', action='store_true',
-                            help='no activation function in FiLM layers')
+                        help='no activation function in FiLM layers')
     parser.add_argument('--dual-BN', action='store_true',
-                            help='Use dual BN together with FiLM layers')
+                        help='Use dual BN together with FiLM layers')
     parser.add_argument('--wgrad-prune-ratio', type=float, default=0.0,
-                            help='Pruning ratio of the gradient of w')
+                        help='Pruning ratio of the gradient of w')
+    parser.add_argument('--film-normalize', action='store_true',
+                        help='Normalize the output of FiLM layers')
 
     opt = parser.parse_args()
     (dataset_test, data_loader) = get_dataset(opt)
@@ -196,7 +205,8 @@ if __name__ == '__main__':
     (embedding_net, cls_head) = get_model(opt)
     add_te_func = get_task_embedding_func(opt)
     postprocessing_net = get_postprocessing_model(opt)
-    if 'imagenet' in opt.dataset.lower() and 'film' in opt.task_embedding.lower():
+    if ('imagenet' in opt.dataset.lower() and
+            'film' in opt.task_embedding.lower()):
         film_preprocess = nn.Linear(16000, 2560, False).cuda()
 
     # Load saved model checkpoints

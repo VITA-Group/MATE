@@ -70,8 +70,8 @@ def get_model(options):
         device_ids = list(range(len(options.gpu.split(','))))
         network = torch.nn.DataParallel(network, device_ids=device_ids)
     else:
-        print ("Cannot recognize the network type")
-        assert(False)
+        print("Cannot recognize the network type")
+        assert False
 
     # Choose the classification head
     if options.head == 'ProtoNet':

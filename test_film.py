@@ -43,8 +43,8 @@ def get_model(options):
             network = resnet12(avg_pool=False,
                                drop_rate=0.1,
                                dropblock_size=2).cuda()
-        device_ids = list(range(len(options.gpu.split(','))))
-        network = torch.nn.DataParallel(network, device_ids=device_ids)
+        # device_ids = list(range(len(options.gpu.split(','))))
+        # network = torch.nn.DataParallel(network, device_ids=device_ids)
     elif options.network == 'ResNet_FiLM':
         film_act = None if options.no_film_activation else F.leaky_relu
         if 'imagenet' in options.dataset.lower():
@@ -184,6 +184,8 @@ if __name__ == '__main__':
                         help='Normalize the output of FiLM layers')
     parser.add_argument('--no-final-relu', action='store_true',
                         help='No final ReLU layer in the backbone')
+    parser.add_argument('--load-naive-backbone', action='store_true',
+                        help='Load pre-trained naive backbones')
 
     opt = parser.parse_args()
     (dataset_test, data_loader) = get_dataset(opt)
@@ -215,7 +217,18 @@ if __name__ == '__main__':
 
     # Load saved model checkpoints
     saved_models = torch.load(opt.load)
-    embedding_net.load_state_dict(saved_models['embedding'])
+    if opt.load_naive_backbone and opt.dual_BN:
+        from utils import load_dual_bn_from_naive_backbone
+        tgt_network = opt.network
+        opt.network = tgt_network.split('_')[0]
+        src_net, _ = get_model(opt)
+        src_net.load_state_dict(saved_models['embedding'], strict=False)
+        load_dual_bn_from_naive_backbone(embedding_net, src_net)
+        opt.network = tgt_network
+        del src_net
+    else:
+        embedding_net.load_state_dict(saved_models['embedding'])
+    # embedding_net.load_state_dict(saved_models['embedding'])
     embedding_net.eval()
     cls_head.load_state_dict(saved_models['head'])
     cls_head.eval()

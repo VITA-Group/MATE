@@ -224,7 +224,6 @@ if __name__ == '__main__':
         src_net, _ = get_model(opt)
         src_net.load_state_dict(saved_models['embedding'])
         load_dual_bn_from_naive_backbone(embedding_net, src_net)
-        print(embedding_net.
         opt.network = tgt_network
         # del src_net
         src_net = None

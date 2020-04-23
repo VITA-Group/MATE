@@ -51,12 +51,14 @@ def get_model(options):
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=5,
                 film_indim=2560, film_alpha=1.0, film_act=film_act,
+                final_relu=(not opt.no_final_relu),
                 film_normalize=opt.film_normalize,
                 dual_BN=options.dual_BN).cuda()
         else:
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=2,
                 film_indim=2560, film_alpha=1.0, film_act=film_act,
+                final_relu=(not opt.no_final_relu),
                 film_normalize=opt.film_normalize,
                 dual_BN=options.dual_BN).cuda()
         device_ids = list(range(len(options.gpu.split(','))))
@@ -182,6 +184,8 @@ if __name__ == '__main__':
                         help='Normalize the output of FiLM layers')
     parser.add_argument('--savedir', type=str, default='saved_film_output',
                         help='Directory that the film output will be saved to')
+    parser.add_argument('--no-final-relu', action='store_true',
+                        help='No final ReLU layer in the backbone')
 
     opt = parser.parse_args()
     (dataset_test, data_loader) = get_dataset(opt)
@@ -208,7 +212,8 @@ if __name__ == '__main__':
     (embedding_net, cls_head) = get_model(opt)
     add_te_func = get_task_embedding_func(opt)
     postprocessing_net = get_postprocessing_model(opt)
-    if 'imagenet' in opt.dataset.lower() and 'film' in opt.task_embedding.lower():
+    if ('imagenet' in opt.dataset.lower() and
+            'film' in opt.task_embedding.lower()):
         film_preprocess = nn.Linear(16000, 2560, False).cuda()
 
     # Load saved model checkpoints
@@ -257,7 +262,8 @@ if __name__ == '__main__':
         )
         emb_support = emb_support.reshape(1, n_support, -1)
 
-        # emb_query = embedding_net(data_query.reshape([-1] + list(data_query.shape[-3:])))
+        # emb_query = embedding_net(data_query.reshape([-1] +
+        #                           list(data_query.shape[-3:])))
         # emb_query = emb_query.reshape(1, n_query, -1)
 
         if i > 1:

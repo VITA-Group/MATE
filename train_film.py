@@ -316,7 +316,7 @@ if __name__ == '__main__':
             tgt_network = opt.network
             opt.network = tgt_network.split('_')[0]
             src_net, _ = get_model(opt)
-            src_net.load_state_dict(saved_models['embedding'])
+            src_net.load_state_dict(saved_models['embedding'], strict=False)
             load_dual_bn_from_naive_backbone(embedding_net, src_net)
             opt.network = tgt_network
             del src_net

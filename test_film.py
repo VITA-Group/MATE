@@ -43,8 +43,8 @@ def get_model(options):
             network = resnet12(avg_pool=False,
                                drop_rate=0.1,
                                dropblock_size=2).cuda()
-        # device_ids = list(range(len(options.gpu.split(','))))
-        # network = torch.nn.DataParallel(network, device_ids=device_ids)
+        device_ids = list(range(len(options.gpu.split(','))))
+        network = torch.nn.DataParallel(network, device_ids=device_ids)
     elif options.network == 'ResNet_FiLM':
         film_act = None if options.no_film_activation else F.leaky_relu
         if 'imagenet' in options.dataset.lower():
@@ -222,11 +222,15 @@ if __name__ == '__main__':
         tgt_network = opt.network
         opt.network = tgt_network.split('_')[0]
         src_net, _ = get_model(opt)
-        src_net.load_state_dict(saved_models['embedding'])
+        try:
+            src_net.load_state_dict(saved_models['embedding'])
+        except RuntimeError:
+            src_net.module.load_state_dict(saved_models['embedding'])
+        embedding_net.load_state_dict(src_net.state_dict(), strict=False)
         load_dual_bn_from_naive_backbone(embedding_net, src_net)
         opt.network = tgt_network
-        # del src_net
-        src_net = None
+        del src_net
+        # src_net = None
     else:
         embedding_net.load_state_dict(saved_models['embedding'])
     # embedding_net.load_state_dict(saved_models['embedding'])

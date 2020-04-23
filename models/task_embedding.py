@@ -157,6 +157,9 @@ class TaskEmbedding_FiLM_SVM_WGrad(nn.Module):
         G = wgrad_abs / wgrad_abs_sum * d
         # print(labels_support)
         # print(G)
+        # np.save('./emb_support.npy', emb_support.detach().cpu().numpy())
+        # np.save('./G.npy', G.detach().cpu().numpy())
+        # np.save('./G_labels.npy', labels_support.detach().cpu().numpy())
 
         # Compute task features
         emb_task = (emb_support * G).sum(dim=1, keepdim=True) # (tasks_per_batch, 1, d)

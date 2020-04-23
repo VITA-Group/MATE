@@ -222,6 +222,8 @@ if __name__ == '__main__':
                         help='Coefficient of the regularization term')
     parser.add_argument('--fix-film', action='store_true',
                         help='Fix FiLM layers in training')
+    parser.add_argument('--train-film-dualBN', action='store_true',
+                        help='Train FiLM layers and DualBN only during training')
     parser.add_argument('--film-normalize', action='store_true',
                         help='Normalize the output of FiLM layers')
     parser.add_argument('--no-final-relu', action='store_true',
@@ -272,14 +274,28 @@ if __name__ == '__main__':
     if 'imagenet' in opt.dataset.lower() and 'film' in opt.task_embedding.lower():
         film_preprocess = nn.Linear(16000, 2560, False).cuda()
 
+    if opt.train_film_dualBN:
+        assert not opt.fix_film
+        from models.dual_bn import DualBN2d
+        from models.FiLM import FiLM_Layer
+        embedding_params = []
+        for m in embedding_net.modules():
+            if isinstance(m, DualBN2d):
+                embedding_params += list(m.BN_task.parameters())
+            if isinstance(m, FiLM_Layer):
+                embedding_params += list(m.parameters())
+    else:
+        embedding_params = embedding_net.parameters()
+
     params = [
-        {'params': embedding_net.parameters()},
+        {'params': embedding_params},
         {'params': cls_head.parameters()},
         {'params': add_te_func.parameters()},
         {'params': postprocessing_net.parameters()}
     ]
 
-    if 'imagenet' in opt.dataset.lower() and 'film' in opt.task_embedding.lower():
+    if ('imagenet' in opt.dataset.lower() and
+            'film' in opt.task_embedding.lower()):
         params.append({'params': film_preprocess.parameters()})
 
     optimizer = torch.optim.SGD(
@@ -346,8 +362,12 @@ if __name__ == '__main__':
             epoch, epoch_learning_rate))
 
         # _, _ = [x.train() for x in (embedding_net, cls_head)]
-        _, _, _, _ = [x.train() for x in (
-        embedding_net, cls_head, add_te_func, postprocessing_net)]
+        _, _, _, _ = [x.train() for x in (embedding_net, cls_head,
+                                          add_te_func, postprocessing_net)]
+        if opt.train_film_dualBN:
+            for m in embedding_net.modules():
+                if isinstance(m, DualBN2d):
+                    m.BN_none.eval()
         if 'imagenet' in opt.dataset.lower():
             film_preprocess = film_preprocess.train()
 

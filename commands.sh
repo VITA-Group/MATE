@@ -10,15 +10,22 @@ condor_submit_bid 250 -interactive -append 'request_cpus = 8' -append 'request_m
 condor_submit_bid 250 -interactive -append 'request_cpus = 8' -append 'request_memory = 12000' \
   -append 'request_GPUs = 1' -append 'requirements = TARGET.CUDAGlobalMemoryMb > 15000'
 
+# Train - MATE
+python train_film.py --gpu 0,1 \
+  --save-path ./experiments/CIFAR_FS_MetaOptNet_SVM_FiLM-SVM-WGrad_dual-BN \
+  --save-epoch 10 --train-shot 5 --dataset CIFAR_FS --val-episodes-per-batch 4 \
+  --head SVM --network ResNet_FiLM \
+  --task-embedding FiLM_SVM_WGrad --dual-BN
+
 # Train - FiLM with Normalization
 python train_film.py --gpu 0,1 \
   --save-path ./experiments/CIFAR_FS_MetaOptNet_SVM_FiLM-SVM-WGrad_dual-BN_msgan-reg-1e-6-detach-normalize \
-  --save-epoch 100 --train-shot 5 --dataset CIFAR_FS --val-episodes-per-batch 4 \
+  --save-epoch 10 --train-shot 5 --dataset CIFAR_FS --val-episodes-per-batch 4 \
   --head SVM --network ResNet_FiLM \
   --task-embedding FiLM_SVM_WGrad --film-normalize --dual-BN \
   --film-reg-type MSGAN --film-reg-level 1e-6
 
-# Test for accuracy
+# Test for accuracy - FiLM
 python test_film.py --gpu 0 --episode 1000 --way 5 --shot 5 --query 15 --dataset CIFAR_FS \
   --head SVM --network ResNet_FiLM \
   --task-embedding FiLM_SVM_WGrad --film-normalize --dual-BN \

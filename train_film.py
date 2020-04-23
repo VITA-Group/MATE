@@ -65,15 +65,15 @@ def get_model(options):
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=5,
                 film_indim=2560, film_alpha=1.0, film_act=film_act,
-                final_relu=(not opt.no_final_relu),
-                film_normalize=opt.film_normalize,
+                final_relu=(not options.no_final_relu),
+                film_normalize=options.film_normalize,
                 dual_BN=options.dual_BN).cuda()
         else:
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=2,
                 film_indim=2560, film_alpha=1.0, film_act=film_act,
-                final_relu=(not opt.no_final_relu),
-                film_normalize=opt.film_normalize,
+                final_relu=(not options.no_final_relu),
+                film_normalize=options.film_normalize,
                 dual_BN=options.dual_BN).cuda()
         device_ids = list(range(len(options.gpu.split(','))))
         network = torch.nn.DataParallel(network, device_ids=device_ids)
@@ -291,7 +291,17 @@ if __name__ == '__main__':
         # NOTE: there is a `-1` because `epoch` starts counting from 1
         last_epoch = saved_models[
                          'epoch'] - 1 if 'epoch' in saved_models.keys() else -1
-        embedding_net.load_state_dict(saved_models['embedding'])
+        if opt.load_naive_backbone and opt.dual_BN:
+            from utils import load_dual_bn_from_naive_backbone
+            tgt_network = opt.network
+            opt.network = tgt_network.split('_')[0]
+            src_net, _ = get_model(opt)
+            src_net.load_state_dict(saved_models['embedding'])
+            load_dual_bn_from_naive_backbone(embedding_net, src_net)
+            opt.network = tgt_network
+            del src_net
+        else:
+            embedding_net.load_state_dict(saved_models['embedding'])
         cls_head.load_state_dict(saved_models['head'])
         if 'task_embedding' in saved_models.keys():
             add_te_func.load_state_dict(saved_models['task_embedding'])
@@ -299,18 +309,20 @@ if __name__ == '__main__':
             postprocessing_net.load_state_dict(saved_models['postprocessing'])
         if 'optimizer' in saved_models.keys():
             optimizer.load_state_dict(saved_models['optimizer'])
+        if 'film_preprocess' in saved_models.keys():
+            film_preprocess.load_state_dict(saved_models['film_preprocess'])
     else:
         last_epoch = -1
 
     if opt.fix_film:
         new_param_list = [
-            param for param in optimizer.param_groups[0]['params'] \
+            param for param in optimizer.param_groups[0]['params']
             if len(param.size()) != 2
         ]
         optimizer.param_groups[0]['params'] = new_param_list
 
     lambda_epoch = lambda e: 1.0 if e < 20 else (
-        0.06 if e < 40 else 0.012 if e < 50 else (0.0024))
+        0.06 if e < 40 else 0.012 if e < 50 else 0.0024)
     lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer,
                                                      lr_lambda=lambda_epoch,
                                                      last_epoch=last_epoch)

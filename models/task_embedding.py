@@ -140,10 +140,12 @@ class TaskEmbedding_FiLM_SVM_WGrad(nn.Module):
                 prune_ratio=0.0):
         n_episode, n_support, d = emb_support.size()
         # Train the SVM head
-        logit_support, wnorm = self.cls_head(emb_support, emb_support, labels_support, train_way, train_shot)
+        logit_support, wnorm = self.cls_head(
+            emb_support, emb_support,labels_support, train_way, train_shot)
 
         # Compute the gradient of `wnorm` w.r.t. `emb_support`
-        wgrad = computeGradientPenalty(wnorm, emb_support) # (tasks_per_batch, n_support, d)
+        wgrad = computeGradientPenalty(wnorm, emb_support)
+        # wgrad -> (tasks_per_batch, n_support, d)
         wgrad_abs = wgrad.abs()
         # Normalize gradient
         with torch.no_grad():
@@ -151,7 +153,8 @@ class TaskEmbedding_FiLM_SVM_WGrad(nn.Module):
             if prune_ratio > 0:
                 assert prune_ratio < 1.0
                 num_pruned = int(d * prune_ratio)
-                threshold = torch.kthvalue(wgrad_abs, k=num_pruned, dim=-1, keepdim=True)[0].detach()
+                threshold = torch.kthvalue(
+                    wgrad_abs, k=num_pruned, dim=-1, keepdim=True)[0].detach()
                 wgrad_abs[wgrad_abs <= threshold] = 0.0
             wgrad_abs_sum = torch.sum(wgrad_abs, dim=(1,2), keepdim=True)
         G = wgrad_abs / wgrad_abs_sum * d
@@ -159,7 +162,8 @@ class TaskEmbedding_FiLM_SVM_WGrad(nn.Module):
         # print(G)
 
         # Compute task features
-        emb_task = (emb_support * G).sum(dim=1, keepdim=True) # (tasks_per_batch, 1, d)
+        emb_task = (emb_support * G).sum(dim=1, keepdim=True)
+        # emb_task -> (tasks_per_batch, 1, d)
 
         return emb_task, wgrad
 

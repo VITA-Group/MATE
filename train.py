@@ -19,6 +19,7 @@ from models.postprocessing import Identity, PostProcessingNet, PostProcessingNet
 
 from utils import set_gpu, Timer, count_accuracy, check_dir, log
 
+
 def one_hot(indices, depth):
     """
     Returns a one-hot tensor.
@@ -35,6 +36,7 @@ def one_hot(indices, depth):
     encoded_indicies = encoded_indicies.scatter_(1,index,1)
 
     return encoded_indicies
+
 
 def get_model(options):
     # Choose the embedding network
@@ -53,8 +55,8 @@ def get_model(options):
         device_ids = list(range(len(options.gpu.split(','))))
         network = torch.nn.DataParallel(network, device_ids=device_ids)
     else:
-        print ("Cannot recognize the network type")
-        assert(False)
+        print("Cannot recognize the network type")
+        assert False
 
     # Choose the classification head
     if options.head == 'ProtoNet':
@@ -72,6 +74,7 @@ def get_model(options):
         assert(False)
 
     return (network, cls_head)
+
 
 def get_dataset(options):
     # Choose the embedding network
@@ -101,6 +104,7 @@ def get_dataset(options):
 
     return (dataset_train, dataset_val, data_loader)
 
+
 def get_task_embedding_func(options):
     # Choose the task embedding function
     te_args = dict(dataset=options.dataset) if options.task_embedding == 'Relation' else dict()
@@ -129,6 +133,7 @@ def get_task_embedding_func(options):
 
     return te_func
 
+
 def get_postprocessing_model(options):
     # Choose the post processing network for embeddings
     if options.post_processing == 'FC':
@@ -153,6 +158,7 @@ def get_postprocessing_model(options):
         return postprocessing_net
     elif options.post_processing == 'None':
         return Identity().cuda()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

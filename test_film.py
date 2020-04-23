@@ -222,10 +222,12 @@ if __name__ == '__main__':
         tgt_network = opt.network
         opt.network = tgt_network.split('_')[0]
         src_net, _ = get_model(opt)
-        src_net.load_state_dict(saved_models['embedding'], strict=False)
+        src_net.load_state_dict(saved_models['embedding'])
         load_dual_bn_from_naive_backbone(embedding_net, src_net)
+        print(embedding_net.
         opt.network = tgt_network
-        del src_net
+        # del src_net
+        src_net = None
     else:
         embedding_net.load_state_dict(saved_models['embedding'])
     # embedding_net.load_state_dict(saved_models['embedding'])
@@ -266,7 +268,7 @@ if __name__ == '__main__':
             n_expand = None
         )
         emb_support = emb_support.reshape(1, n_support, -1)
-        # np.save('./emb_support_before_film.npy', emb_support.detach().cpu().numpy())
+        np.save('./emb_support_before_film_load_naive.npy', emb_support.detach().cpu().numpy())
 
         # emb_query = embedding_net(data_query.reshape([-1] + list(data_query.shape[-3:])))
         # emb_query = emb_query.reshape(1, n_query, -1)
@@ -302,8 +304,9 @@ if __name__ == '__main__':
         # emb_support = postprocessing_net(emb_support.reshape([-1] + list(emb_support.size()[2:])))
         emb_support = emb_support.reshape(1, n_support, -1)
         # np.save('./emb_support_after_film.npy', emb_support.detach().cpu().numpy())
+        np.save('./emb_support_after_film_load_naive.npy', emb_support.detach().cpu().numpy())
         # print('hahah')
-        # exit()
+        exit()
 
         # Forward pass for query samples with task embeddings
         if emb_task is not None:

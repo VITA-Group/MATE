@@ -164,6 +164,8 @@ def get_postprocessing_model(options):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--lr', type=float, default=0.1,
+                        help='initial learning rate')
     parser.add_argument('--num-epoch', type=int, default=60,
                         help='number of training epochs')
     parser.add_argument('--save-epoch', type=int, default=10,
@@ -228,6 +230,8 @@ if __name__ == '__main__':
                         help='Normalize the output of FiLM layers')
     parser.add_argument('--no-final-relu', action='store_true',
                         help='No final ReLU layer in the backbone')
+    parser.add_argument('--load-naive-backbone', action='store_true',
+                        help='Load pre-trained naive backbones')
 
     opt = parser.parse_args()
 
@@ -299,7 +303,7 @@ if __name__ == '__main__':
         params.append({'params': film_preprocess.parameters()})
 
     optimizer = torch.optim.SGD(
-        params, lr=0.1, momentum=0.9, weight_decay=5e-4, nesterov=True)
+        params, lr=opt.lr, momentum=0.9, weight_decay=5e-4, nesterov=True)
 
     # Load saved model checkpoints
     if opt.load is not None:

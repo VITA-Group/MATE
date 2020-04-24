@@ -312,14 +312,18 @@ if __name__ == '__main__':
         last_epoch = saved_models[
                          'epoch'] - 1 if 'epoch' in saved_models.keys() else -1
         if opt.load_naive_backbone and opt.dual_BN:
-            from utils import load_dual_bn_from_naive_backbone
+            from utils import load_from_naive_backbone
             tgt_network = opt.network
             opt.network = tgt_network.split('_')[0]
             src_net, _ = get_model(opt)
-            src_net.load_state_dict(saved_models['embedding'], strict=False)
-            load_dual_bn_from_naive_backbone(embedding_net, src_net)
+            try:
+                src_net.load_state_dict(saved_models['embedding'])
+            except RuntimeError:
+                src_net.module.load_state_dict(saved_models['embedding'])
+            load_from_naive_backbone(embedding_net, src_net)
             opt.network = tgt_network
             del src_net
+            # src_net = None
         else:
             embedding_net.load_state_dict(saved_models['embedding'])
         cls_head.load_state_dict(saved_models['head'])

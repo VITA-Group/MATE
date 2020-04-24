@@ -270,6 +270,7 @@ if __name__ == '__main__':
             n_expand = None
         )
         emb_support = emb_support.reshape(1, n_support, -1)
+
         # np.save('./emb_support_before_film_load_naive.npy', emb_support.detach().cpu().numpy())
 
         # emb_query = embedding_net(data_query.reshape([-1] + list(data_query.shape[-3:])))
@@ -304,11 +305,12 @@ if __name__ == '__main__':
                 n_expand = None
             )
         # emb_support = postprocessing_net(emb_support.reshape([-1] + list(emb_support.size()[2:])))
-        # emb_support = emb_support.reshape(1, n_support, -1)
+        emb_support = emb_support.reshape(1, n_support, -1)
+
         # np.save('./emb_support_after_film.npy', emb_support.detach().cpu().numpy())
         # np.save('./emb_support_after_film_load_naive.npy', emb_support.detach().cpu().numpy())
         # print('hahaha')
-        exit()
+        # exit()
 
         # Forward pass for query samples with task embeddings
         if emb_task is not None:

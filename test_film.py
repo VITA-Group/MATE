@@ -218,7 +218,7 @@ if __name__ == '__main__':
     # Load saved model checkpoints
     saved_models = torch.load(opt.load)
     if opt.load_naive_backbone and opt.dual_BN:
-        from utils import load_dual_bn_from_naive_backbone
+        from utils import load_from_naive_backbone
         tgt_network = opt.network
         opt.network = tgt_network.split('_')[0]
         src_net, _ = get_model(opt)
@@ -226,8 +226,7 @@ if __name__ == '__main__':
             src_net.load_state_dict(saved_models['embedding'])
         except RuntimeError:
             src_net.module.load_state_dict(saved_models['embedding'])
-        embedding_net.load_state_dict(src_net.state_dict(), strict=False)
-        load_dual_bn_from_naive_backbone(embedding_net, src_net)
+        load_from_naive_backbone(embedding_net, src_net)
         opt.network = tgt_network
         del src_net
         # src_net = None

@@ -347,7 +347,7 @@ if __name__ == '__main__':
                 .format(i, opt.episode, avg, ci95, acc))
 
     if not os.path.isdir(opt.save_dir):
-        os.makedirs(opt.savedir)
+        os.makedirs(opt.save_dir)
     for i, i_film_outputs in enumerate(film_outputs):
         i_film_outputs = np.concatenate(i_film_outputs, axis=0)
         np.save(

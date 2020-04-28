@@ -351,6 +351,6 @@ if __name__ == '__main__':
     for i, i_film_outputs in enumerate(film_outputs):
         i_film_outputs = np.concatenate(i_film_outputs, axis=0)
         np.save(
-            os.path.join(opt.savedir, 'film_out_{id}'.format(id=i + 1)),
+            os.path.join(opt.save_dir, 'film_out_{id}'.format(id=i + 1)),
             i_film_outputs
         )

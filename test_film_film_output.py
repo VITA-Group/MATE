@@ -182,7 +182,7 @@ if __name__ == '__main__':
                         help='Pruning ratio of the gradient of w')
     parser.add_argument('--film-normalize', action='store_true',
                         help='Normalize the output of FiLM layers')
-    parser.add_argument('--savedir', type=str, default='saved_film_output',
+    parser.add_argument('--save-dir', type=str, default='saved_film_output',
                         help='Directory that the film output will be saved to')
     parser.add_argument('--no-final-relu', action='store_true',
                         help='No final ReLU layer in the backbone')
@@ -346,7 +346,7 @@ if __name__ == '__main__':
                 'Episode [{}/{}]:\t\t\tAccuracy: {:.2f} ± {:.2f} % ({:.2f} %)' \
                 .format(i, opt.episode, avg, ci95, acc))
 
-    if not os.path.isdir(opt.savedir):
+    if not os.path.isdir(opt.save_dir):
         os.makedirs(opt.savedir)
     for i, i_film_outputs in enumerate(film_outputs):
         i_film_outputs = np.concatenate(i_film_outputs, axis=0)

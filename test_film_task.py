@@ -181,6 +181,8 @@ if __name__ == '__main__':
                         help='Pruning ratio of the gradient of w')
     parser.add_argument('--film-normalize', action='store_true',
                         help='Normalize the output of FiLM layers')
+    parser.add_argument('--save-dir', type=str, default='saved-task-emb',
+                        help='Directory that the film output will be saved to')
     parser.add_argument('--save-file', type=str, default='task_embedding.npy',
                         help='File name that the task embeddings will be saved to')
     parser.add_argument('--no-final-relu', action='store_true',
@@ -335,6 +337,8 @@ if __name__ == '__main__':
                 'Episode [{}/{}]:\t\t\tAccuracy: {:.2f} ± {:.2f} % ({:.2f} %)' \
                 .format(i, opt.episode, avg, ci95, acc))
 
+    if not os.path.isdir(opt.save_dir):
+        os.makedirs(opt.savedir)
     # Save task embeddings to disk
     task_embeddings = np.concatenate(task_embeddings, axis=0)
-    np.save(opt.save_file, task_embeddings)
+    np.save(os.path.join(opt.save_dir, opt.save_file), task_embeddings)

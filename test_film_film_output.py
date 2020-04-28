@@ -242,6 +242,8 @@ if __name__ == '__main__':
     # exit()
 
     # Evaluate on test set
+    if not os.path.isdir(opt.save_dir):
+        os.makedirs(opt.save_dir)
     test_accuracies = []
     film_outputs = [
         [] for m in embedding_net.modules() if isinstance(m, FiLM_Layer)
@@ -284,6 +286,14 @@ if __name__ == '__main__':
         id_m = 0
         for m in embedding_net.modules():
             if isinstance(m, FiLM_Layer):
+                if i == 0:
+                    w1 = m.MLP[0].weight.detach().cpu().numpy()
+                    b1 = m.MLP[0].bias.detach().cpu().numpy()
+                    w2 = m.MLP[1].weight.detach().cpu().numpy()
+                    b2 = m.MLP[1].bias.detach().cpu().numpy()
+                    np.savez(os.path.join(opt.save_dir,
+                                          'film_layer_{}.npz'.format(id_m+1)),
+                             w1=w1, b1=b1, w2=w2, b2=b2)
                 film_out = m.get_mlp_output(emb_task).squeeze(1)
                 film_outputs[id_m].append(film_out.detach().cpu().numpy())
                 id_m += 1
@@ -346,11 +356,9 @@ if __name__ == '__main__':
                 'Episode [{}/{}]:\t\t\tAccuracy: {:.2f} ± {:.2f} % ({:.2f} %)' \
                 .format(i, opt.episode, avg, ci95, acc))
 
-    if not os.path.isdir(opt.save_dir):
-        os.makedirs(opt.save_dir)
-    for i, i_film_outputs in enumerate(film_outputs):
+    for ii, i_film_outputs in enumerate(film_outputs):
         i_film_outputs = np.concatenate(i_film_outputs, axis=0)
         np.save(
-            os.path.join(opt.save_dir, 'film_out_{id}'.format(id=i + 1)),
+            os.path.join(opt.save_dir, 'film_out_{id}'.format(id=ii + 1)),
             i_film_outputs
         )

@@ -338,7 +338,7 @@ if __name__ == '__main__':
                 .format(i, opt.episode, avg, ci95, acc))
 
     if not os.path.isdir(opt.save_dir):
-        os.makedirs(opt.savedir)
+        os.makedirs(opt.save_dir)
     # Save task embeddings to disk
     task_embeddings = np.concatenate(task_embeddings, axis=0)
     np.save(os.path.join(opt.save_dir, opt.save_file), task_embeddings)

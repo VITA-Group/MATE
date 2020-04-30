@@ -286,7 +286,7 @@ if __name__ == '__main__':
         id_m = 0
         for m in embedding_net.modules():
             if isinstance(m, FiLM_Layer):
-                if i == 0:
+                if i == 1:
                     w1 = m.MLP[0].weight.detach().cpu().numpy()
                     b1 = m.MLP[0].bias.detach().cpu().numpy()
                     w2 = m.MLP[1].weight.detach().cpu().numpy()

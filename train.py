@@ -273,7 +273,9 @@ if __name__ == '__main__':
         last_epoch = -1
 
     lambda_epoch = lambda e: 1.0 if e < 20 else (0.06 if e < 40 else 0.012 if e < 50 else (0.0024))
-    lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_epoch, last_epoch=last_epoch)
+    lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer,
+                                                     lr_lambda=lambda_epoch,
+                                                     last_epoch=last_epoch)
 
     max_val_acc = 0.0
 
@@ -282,6 +284,8 @@ if __name__ == '__main__':
 
     for epoch in range(last_epoch + 2, opt.num_epoch + 1):
         # Train on the training split
+        # Learning rate decay
+        lr_scheduler.step()
 
         # Fetch the current epoch's learning rate
         epoch_learning_rate = 0.1
@@ -416,7 +420,7 @@ if __name__ == '__main__':
                     'optimizer': optimizer.state_dict()},
                    os.path.join(opt.save_path, 'last_epoch.pth'))
 
-        if epoch % opt.save_epoch == 0 or epoch in [21,22,23,24]:
+        if epoch % opt.save_epoch == 0 or epoch in [20,21,22,23,24,25]:
             torch.save({'epoch': epoch,
                         'embedding': embedding_net.state_dict(),
                         'head': cls_head.state_dict(),
@@ -426,6 +430,3 @@ if __name__ == '__main__':
                        os.path.join(opt.save_path, 'epoch_{}.pth'.format(epoch)))
 
         log(log_file_path, 'Elapsed Time: {}/{}\n'.format(timer.measure(), timer.measure(epoch / float(opt.num_epoch))))
-
-        # Learning rate decay
-        lr_scheduler.step()

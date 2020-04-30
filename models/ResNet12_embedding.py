@@ -73,7 +73,8 @@ class BasicBlock(nn.Module):
 
 class ResNet(nn.Module):
 
-    def __init__(self, block, keep_prob=1.0, avg_pool=False, drop_rate=0.0, dropblock_size=5):
+    def __init__(self, block, keep_prob=1.0, avg_pool=False,
+                 drop_rate=0.0, dropblock_size=5):
         self.inplanes = 3
         super(ResNet, self).__init__()
 
@@ -109,7 +110,8 @@ class ResNet(nn.Module):
             )
 
         layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample, drop_rate, drop_block, block_size))
+        layers.append(block(self.inplanes, planes, stride, downsample,
+                            drop_rate, drop_block, block_size))
         self.inplanes = planes * block.expansion
 
         return nn.Sequential(*layers)

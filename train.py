@@ -61,7 +61,9 @@ def get_model(options):
         network = torch.nn.DataParallel(network, device_ids=device_ids)
     elif options.network == 'ResNet18':
         assert 'imagenet' in options.dataset.lower()
-        network = resnet18(pretrained=False).cuda()
+        network = resnet18(pretrained=False,
+                           drop_rate=0.1,
+                           dropblock_size=5).cuda()
         device_ids = list(range(len(options.gpu.split(','))))
         network = torch.nn.DataParallel(network, device_ids=device_ids)
     else:

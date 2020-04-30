@@ -14,6 +14,7 @@ from models.classification_heads import ClassificationHead
 from models.R2D2_embedding import R2D2Embedding
 from models.protonet_embedding import ProtoNetEmbedding
 from models.ResNet12_embedding import resnet12
+from models.ResNet18_embedding import resnet18
 from models.task_embedding import TaskEmbedding
 from models.postprocessing import Identity, PostProcessingNet, PostProcessingNetConv1d, PostProcessingNetConv1d_SelfAttn
 
@@ -46,12 +47,21 @@ def get_model(options):
         network = R2D2Embedding().cuda()
     elif options.network == 'ResNet':
         if options.dataset == 'miniImageNet' or options.dataset == 'tieredImageNet':
-            network = resnet12(avg_pool=False, drop_rate=0.1, dropblock_size=5).cuda()
+            network = resnet12(avg_pool=False,
+                               drop_rate=0.1,
+                               dropblock_size=5).cuda()
             # device_ids = list(range(len(options.gpu.split(','))))
             # network = torch.nn.DataParallel(network, device_ids=device_ids)
             # network = torch.nn.DataParallel(network, device_ids=[0, 1, 2, 3])
         else:
-            network = resnet12(avg_pool=False, drop_rate=0.1, dropblock_size=2).cuda()
+            network = resnet12(avg_pool=False,
+                               drop_rate=0.1,
+                               dropblock_size=2).cuda()
+        device_ids = list(range(len(options.gpu.split(','))))
+        network = torch.nn.DataParallel(network, device_ids=device_ids)
+    elif options.network == 'ResNet18':
+        assert 'imagenet' in options.dataset.lower()
+        network = resnet18(pretrained=False).cuda()
         device_ids = list(range(len(options.gpu.split(','))))
         network = torch.nn.DataParallel(network, device_ids=device_ids)
     else:

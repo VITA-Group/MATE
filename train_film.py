@@ -53,7 +53,6 @@ def get_model(options):
             network = resnet12(avg_pool=False,
                                drop_rate=0.1,
                                dropblock_size=5).cuda()
-            options.film_preprocess_input_dim = 16000
         else:
             network = resnet12(avg_pool=False,
                                drop_rate=0.1,
@@ -69,6 +68,7 @@ def get_model(options):
                 final_relu=(not options.no_final_relu),
                 film_normalize=options.film_normalize,
                 dual_BN=options.dual_BN).cuda()
+            options.film_preprocess_input_dim = 16000
         else:
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=2,

@@ -197,7 +197,7 @@ if __name__ == '__main__':
                         help='choose which classification head to use. miniImageNet, tieredImageNet, CIFAR_FS, FC100')
     parser.add_argument('--episodes-per-batch', type=int, default=8,
                         help='number of episodes per batch')
-    parser.add_argument('--val-episodes-per-batch', type=int, default=1,
+    parser.add_argument('--val-episodes-per-batch', type=int, default=4,
                         help='number of episodes per batch')
     parser.add_argument('--eps', type=float, default=0.0,
                         help='epsilon of label smoothing')
@@ -523,10 +523,10 @@ if __name__ == '__main__':
             optimizer.step()
 
         # empty cache
-        del data_support, labels_support, data_query, labels_query
-        del emb_support, emb_task, emb_task_temp, gram, mask
-        del emb_query, logit_query, log_prb, smoothed_one_hot
-        del train_losses, train_accuracies, acc, loss, loss_film_reg, loss_ortho_reg
+        # del data_support, labels_support, data_query, labels_query
+        # del emb_support, emb_task, emb_task_temp, gram, mask
+        # del emb_query, logit_query, log_prb, smoothed_one_hot
+        # del train_losses, train_accuracies, acc, loss, loss_film_reg, loss_ortho_reg
         torch.cuda.empty_cache()
 
         # Evaluate on the validation split
@@ -675,8 +675,8 @@ if __name__ == '__main__':
             timer.measure(), timer.measure(epoch / float(opt.num_epoch))))
 
         # empty cache
-        del data_support, labels_support, data_query, labels_query
-        del emb_support, emb_task, G, emb_task_temp, gram, mask
-        del emb_query, logit_query, log_prb, smoothed_one_hot
-        del val_losses, val_acc_avg, val_acc_ci95, val_accuracies, accs, loss
+        # del data_support, labels_support, data_query, labels_query
+        # del emb_support, emb_task, G, emb_task_temp, gram, mask
+        # del emb_query, logit_query, log_prb, smoothed_one_hot
+        # del val_losses, val_acc_avg, val_acc_ci95, val_accuracies, accs, loss
         torch.cuda.empty_cache()

@@ -429,6 +429,7 @@ if __name__ == '__main__':
                 loss_ortho_reg = ((gram * mask) ** 2.0).sum()
             else:
                 mask = 0.0
+                emb_task_temp = 0.0
                 gram = 0.0
                 loss_ortho_reg = 0.0
 

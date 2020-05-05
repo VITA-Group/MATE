@@ -428,6 +428,8 @@ if __name__ == '__main__':
                 gram = torch.matmul(emb_task_temp, emb_task_temp.t())
                 loss_ortho_reg = ((gram * mask) ** 2.0).sum()
             else:
+                mask = 0.0
+                gram = 0.0
                 loss_ortho_reg = 0.0
 
             # if opt.wgrad_l1_reg > 0 and G is not None:
@@ -508,7 +510,7 @@ if __name__ == '__main__':
             train_accuracies.append(acc.item())
             train_losses.append(loss.item())
 
-            if (i % 100 == 0):
+            if i % 100 == 0:
                 train_acc_avg = np.mean(np.array(train_accuracies))
                 log(log_file_path,
                     'Train Epoch: {}\tBatch: [{}/{}]\tLoss: {:.4f}\tAccuracy: {:.2f} % ({:.2f} %)'.format(
@@ -519,9 +521,16 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
 
+        # empty cache
+        del data_support, labels_support, data_query, labels_query
+        del emb_support, emb_task, emb_task_temp, gram, mask
+        del emb_query, logit_query, log_prb, smoothed_one_hot
+        del train_losses, train_accuracies, acc, loss, loss_film_reg, loss_ortho_reg
+        torch.cuda.empty_cache()
+
         # Evaluate on the validation split
-        _, _, _, _ = [x.eval() for x in (
-        embedding_net, cls_head, add_te_func, postprocessing_net)]
+        _, _, _, _ = [x.eval() for x in
+                      (embedding_net, cls_head, add_te_func, postprocessing_net)]
         if 'imagenet' in opt.dataset.lower():
             film_preprocess.eval()
 
@@ -661,10 +670,12 @@ if __name__ == '__main__':
             #             'optimizer': optimizer.state_dict()},
             #            os.path.join(opt.save_path, 'epoch_{}.pth'.format(epoch)))
 
-        log(log_file_path, 'Elapsed Time: {}/{}\n'.format(timer.measure(),
-                                                          timer.measure(
-                                                              epoch / float(
-                                                                  opt.num_epoch))))
+        log(log_file_path, 'Elapsed Time: {}/{}\n'.format(
+            timer.measure(), timer.measure(epoch / float(opt.num_epoch))))
 
         # empty cache
+        del data_support, labels_support, data_query, labels_query
+        del emb_support, emb_task, G, emb_task_temp, gram, mask
+        del emb_query, logit_query, log_prb, smoothed_one_hot
+        del val_losses, val_acc_avg, val_acc_ci95, val_accuracies, accs, loss
         torch.cuda.empty_cache()

@@ -53,6 +53,7 @@ def get_model(options):
             network = resnet12(avg_pool=False,
                                drop_rate=0.1,
                                dropblock_size=5).cuda()
+            options.film_preprocess_input_dim = 16000
         else:
             network = resnet12(avg_pool=False,
                                drop_rate=0.1,
@@ -276,7 +277,7 @@ if __name__ == '__main__':
     add_te_func = get_task_embedding_func(opt)
     postprocessing_net = get_postprocessing_model(opt)
     if 'imagenet' in opt.dataset.lower() and 'film' in opt.task_embedding.lower():
-        film_preprocess = nn.Linear(16000, 2560, False).cuda()
+        film_preprocess = nn.Linear(opt.film_preprocess_input_dim, 2560, False).cuda()
 
     if opt.train_film_dualBN:
         assert not opt.fix_film
@@ -377,7 +378,7 @@ if __name__ == '__main__':
                 if isinstance(m, DualBN2d):
                     m.BN_none.eval()
         if 'imagenet' in opt.dataset.lower():
-            film_preprocess = film_preprocess.train()
+            film_preprocess.train()
 
         train_accuracies = []
         train_losses = []
@@ -522,7 +523,7 @@ if __name__ == '__main__':
         _, _, _, _ = [x.eval() for x in (
         embedding_net, cls_head, add_te_func, postprocessing_net)]
         if 'imagenet' in opt.dataset.lower():
-            film_preprocess = film_preprocess.eval()
+            film_preprocess.eval()
 
         val_accuracies = []
         val_losses = []

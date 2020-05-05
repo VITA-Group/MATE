@@ -197,7 +197,7 @@ if __name__ == '__main__':
                         help='choose which classification head to use. miniImageNet, tieredImageNet, CIFAR_FS, FC100')
     parser.add_argument('--episodes-per-batch', type=int, default=8,
                         help='number of episodes per batch')
-    parser.add_argument('--val-episodes-per-batch', type=int, default=20,
+    parser.add_argument('--val-episodes-per-batch', type=int, default=1,
                         help='number of episodes per batch')
     parser.add_argument('--eps', type=float, default=0.0,
                         help='epsilon of label smoothing')

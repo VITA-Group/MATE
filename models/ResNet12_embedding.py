@@ -7,6 +7,7 @@ from models.dropblock import DropBlock
 # TADAM: Task dependent adaptive metric for improved few-shot learning (Oreshkin et al., in NIPS 2018) and
 # A Simple Neural Attentive Meta-Learner (Mishra et al., in ICLR 2018).
 
+
 def conv3x3(in_planes, out_planes, stride=1):
     """3x3 convolution with padding"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
@@ -16,7 +17,8 @@ def conv3x3(in_planes, out_planes, stride=1):
 class BasicBlock(nn.Module):
     expansion = 1
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None, drop_rate=0.0, drop_block=False, block_size=1):
+    def __init__(self, inplanes, planes, stride=1, downsample=None,
+                 drop_rate=0.0, drop_block=False, block_size=1):
         super(BasicBlock, self).__init__()
         self.conv1 = conv3x3(inplanes, planes)
         self.bn1 = nn.BatchNorm2d(planes)
@@ -28,6 +30,7 @@ class BasicBlock(nn.Module):
         self.maxpool = nn.MaxPool2d(stride)
         self.downsample = downsample
         self.stride = stride
+
         self.drop_rate = drop_rate
         self.num_batches_tracked = 0
         self.drop_block = drop_block
@@ -57,7 +60,7 @@ class BasicBlock(nn.Module):
         out = self.maxpool(out)
 
         if self.drop_rate > 0:
-            if self.drop_block == True:
+            if self.drop_block:
                 feat_size = out.size()[2]
                 keep_rate = max(1.0 - self.drop_rate / (20*2000) * (self.num_batches_tracked), 1.0 - self.drop_rate)
                 gamma = (1 - keep_rate) / self.block_size**2 * feat_size**2 / (feat_size - self.block_size + 1)**2
@@ -70,14 +73,17 @@ class BasicBlock(nn.Module):
 
 class ResNet(nn.Module):
 
-    def __init__(self, block, keep_prob=1.0, avg_pool=False, drop_rate=0.0, dropblock_size=5):
+    def __init__(self, block, keep_prob=1.0, avg_pool=False,
+                 drop_rate=0.0, dropblock_size=5):
         self.inplanes = 3
         super(ResNet, self).__init__()
 
-        self.layer1 = self._make_layer(block, 64, stride=2, drop_rate=drop_rate)
+        self.layer1 = self._make_layer(block, 64,  stride=2, drop_rate=drop_rate)
         self.layer2 = self._make_layer(block, 160, stride=2, drop_rate=drop_rate)
-        self.layer3 = self._make_layer(block, 320, stride=2, drop_rate=drop_rate, drop_block=True, block_size=dropblock_size)
-        self.layer4 = self._make_layer(block, 640, stride=2, drop_rate=drop_rate, drop_block=True, block_size=dropblock_size)
+        self.layer3 = self._make_layer(block, 320, stride=2, drop_rate=drop_rate,
+                                       drop_block=True, block_size=dropblock_size)
+        self.layer4 = self._make_layer(block, 640, stride=2, drop_rate=drop_rate,
+                                       drop_block=True, block_size=dropblock_size)
         if avg_pool:
             self.avgpool = nn.AvgPool2d(5, stride=1)
         self.keep_prob = keep_prob
@@ -87,12 +93,14 @@ class ResNet(nn.Module):
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='leaky_relu')
+                nn.init.kaiming_normal_(m.weight, mode='fan_out',
+                                        nonlinearity='leaky_relu')
             elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
 
-    def _make_layer(self, block, planes, stride=1, drop_rate=0.0, drop_block=False, block_size=1):
+    def _make_layer(self, block, planes, stride=1, drop_rate=0.0,
+                    drop_block=False, block_size=1):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
@@ -102,7 +110,8 @@ class ResNet(nn.Module):
             )
 
         layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample, drop_rate, drop_block, block_size))
+        layers.append(block(self.inplanes, planes, stride, downsample,
+                            drop_rate, drop_block, block_size))
         self.inplanes = planes * block.expansion
 
         return nn.Sequential(*layers)

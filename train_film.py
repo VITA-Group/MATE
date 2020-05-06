@@ -68,6 +68,7 @@ def get_model(options):
                 final_relu=(not options.no_final_relu),
                 film_normalize=options.film_normalize,
                 dual_BN=options.dual_BN).cuda()
+            options.film_preprocess_input_dim = 16000
         else:
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=2,
@@ -196,7 +197,7 @@ if __name__ == '__main__':
                         help='choose which classification head to use. miniImageNet, tieredImageNet, CIFAR_FS, FC100')
     parser.add_argument('--episodes-per-batch', type=int, default=8,
                         help='number of episodes per batch')
-    parser.add_argument('--val-episodes-per-batch', type=int, default=20,
+    parser.add_argument('--val-episodes-per-batch', type=int, default=4,
                         help='number of episodes per batch')
     parser.add_argument('--eps', type=float, default=0.0,
                         help='epsilon of label smoothing')
@@ -276,7 +277,7 @@ if __name__ == '__main__':
     add_te_func = get_task_embedding_func(opt)
     postprocessing_net = get_postprocessing_model(opt)
     if 'imagenet' in opt.dataset.lower() and 'film' in opt.task_embedding.lower():
-        film_preprocess = nn.Linear(16000, 2560, False).cuda()
+        film_preprocess = nn.Linear(opt.film_preprocess_input_dim, 2560, False).cuda()
 
     if opt.train_film_dualBN:
         assert not opt.fix_film
@@ -377,7 +378,7 @@ if __name__ == '__main__':
                 if isinstance(m, DualBN2d):
                     m.BN_none.eval()
         if 'imagenet' in opt.dataset.lower():
-            film_preprocess = film_preprocess.train()
+            film_preprocess.train()
 
         train_accuracies = []
         train_losses = []
@@ -430,6 +431,9 @@ if __name__ == '__main__':
                 gram = torch.matmul(emb_task_temp, emb_task_temp.t())
                 loss_ortho_reg = ((gram * mask) ** 2.0).sum()
             else:
+                mask = 0.0
+                emb_task_temp = 0.0
+                gram = 0.0
                 loss_ortho_reg = 0.0
 
             # if opt.wgrad_l1_reg > 0 and G is not None:
@@ -510,7 +514,7 @@ if __name__ == '__main__':
             train_accuracies.append(acc.item())
             train_losses.append(loss.item())
 
-            if (i % 100 == 0):
+            if i % 100 == 0:
                 train_acc_avg = np.mean(np.array(train_accuracies))
                 log(log_file_path,
                     'Train Epoch: {}\tBatch: [{}/{}]\tLoss: {:.4f}\tAccuracy: {:.2f} % ({:.2f} %)'.format(
@@ -521,11 +525,18 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
 
+        # empty cache
+        # del data_support, labels_support, data_query, labels_query
+        # del emb_support, emb_task, emb_task_temp, gram, mask
+        # del emb_query, logit_query, log_prb, smoothed_one_hot
+        # del train_losses, train_accuracies, acc, loss, loss_film_reg, loss_ortho_reg
+        torch.cuda.empty_cache()
+
         # Evaluate on the validation split
-        _, _, _, _ = [x.eval() for x in (
-        embedding_net, cls_head, add_te_func, postprocessing_net)]
+        _, _, _, _ = [x.eval() for x in
+                      (embedding_net, cls_head, add_te_func, postprocessing_net)]
         if 'imagenet' in opt.dataset.lower():
-            film_preprocess = film_preprocess.eval()
+            film_preprocess.eval()
 
         val_accuracies = []
         val_losses = []
@@ -671,10 +682,12 @@ if __name__ == '__main__':
             #             'optimizer': optimizer.state_dict()},
             #            os.path.join(opt.save_path, 'epoch_{}.pth'.format(epoch)))
 
-        log(log_file_path, 'Elapsed Time: {}/{}\n'.format(timer.measure(),
-                                                          timer.measure(
-                                                              epoch / float(
-                                                                  opt.num_epoch))))
+        log(log_file_path, 'Elapsed Time: {}/{}\n'.format(
+            timer.measure(), timer.measure(epoch / float(opt.num_epoch))))
 
         # empty cache
+        # del data_support, labels_support, data_query, labels_query
+        # del emb_support, emb_task, G, emb_task_temp, gram, mask
+        # del emb_query, logit_query, log_prb, smoothed_one_hot
+        # del val_losses, val_acc_avg, val_acc_ci95, val_accuracies, accs, loss
         torch.cuda.empty_cache()

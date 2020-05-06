@@ -383,6 +383,9 @@ if __name__ == '__main__':
         train_losses = []
 
         for i, batch in enumerate(tqdm(dloader_train(epoch)), 1):
+            break
+            # if i == 10:
+            #     break
             data_support, labels_support, data_query, labels_query, _, _ = [
                 x.cuda() for x in batch]
             # print(data_support.size())
@@ -527,6 +530,9 @@ if __name__ == '__main__':
         val_accuracies = []
         val_losses = []
 
+        embedding_net_temp = embedding_net.module \
+                if opt.val_episodes_per_batch == 1 else embedding_net
+
         for i, batch in enumerate(tqdm(dloader_val(epoch)), 1):
             data_support, labels_support, data_query, labels_query, _, _ = [
                 x.cuda() for x in batch]
@@ -534,7 +540,8 @@ if __name__ == '__main__':
             test_n_support = opt.test_way * opt.val_shot
             test_n_query = opt.test_way * opt.val_query
 
-            emb_support = embedding_net(
+            emb_support = embedding_net_temp(
+            # emb_support = embedding_net(
                 data_support.reshape([-1] + list(data_support.shape[-3:])),
                 task_embedding=None,
                 n_expand=None
@@ -558,13 +565,15 @@ if __name__ == '__main__':
             # Forward pass for support samples with task embeddings
             if emb_task is not None:
                 # emb_task_support_batch = emb_task.expand(-1, test_n_support, -1)
-                emb_support = embedding_net(
+                emb_support = embedding_net_temp(
+                # emb_support = embedding_net(
                     data_support.reshape([-1] + list(data_support.shape[-3:])),
                     task_embedding=emb_task,
                     n_expand=test_n_support
                 )
             else:
-                emb_support = embedding_net(
+                emb_support = embedding_net_temp(
+                # emb_support = embedding_net(
                     data_support.reshape([-1] + list(data_support.shape[-3:])),
                     task_embedding=None,
                     n_expand=None
@@ -576,13 +585,15 @@ if __name__ == '__main__':
             # Forward pass for query samples with task embeddings
             if emb_task is not None:
                 # emb_task_query_batch = emb_task.expand(-1, test_n_query, -1)
-                emb_query = embedding_net(
+                emb_query = embedding_net_temp(
+                # emb_query = embedding_net(
                     data_query.reshape([-1] + list(data_query.shape[-3:])),
                     task_embedding=emb_task,
                     n_expand=test_n_query
                 )
             else:
-                emb_query = embedding_net(
+                emb_query = embedding_net_temp(
+                # emb_query = embedding_net(
                     data_query.reshape([-1] + list(data_query.shape[-3:])),
                     task_embedding=None,
                     n_expand=None

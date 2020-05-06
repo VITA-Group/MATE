@@ -40,6 +40,7 @@ class FiLM_Layer(nn.Module):
         N, C, H, W = _input.size()
         # print(_input.abs().mean())
         if _task_emb is not None:
+            # print('FiLM forward', _task_emb.get_device(), _task_emb.size())
             _task_emb = _task_emb.squeeze(1)
             _out = self.MLP(_task_emb)
             if self.normalize:

@@ -69,6 +69,8 @@ class BasicBlockFiLM(nn.Module):
         self.final_relu = final_relu
 
     def forward(self, x, task_embedding, n_expand):
+        # if task_embedding is not None:
+        #     print('BasicBlock forward', task_embedding.get_device(), task_embedding.size())
         self.num_batches_tracked += 1
 
         residual = x
@@ -185,6 +187,8 @@ class ResNet_FiLM(nn.Module):
         return layers
 
     def forward(self, x, task_embedding, n_expand):
+        # if task_embedding is not None:
+        #     print('embedding net forward', task_embedding.get_device(), task_embedding.size())
         x = self.layer1(x, task_embedding, n_expand)
         x = self.layer2(x, task_embedding, n_expand)
         x = self.layer3(x, task_embedding, n_expand)

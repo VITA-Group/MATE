@@ -50,10 +50,11 @@ def get_model(options):
         if 'imagenet' in options.dataset.lower():
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=5,
-                film_indim=2560, film_alpha=1.0, film_act=film_act,
+                film_indim=opt.film_indim, film_alpha=1.0, film_act=film_act,
                 final_relu=(not opt.no_final_relu),
                 film_normalize=opt.film_normalize,
                 dual_BN=options.dual_BN).cuda()
+            options.film_preprocess_input_dim = 16000
         else:
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=2,
@@ -207,13 +208,20 @@ if __name__ == '__main__':
     log_file_path = os.path.join(os.path.dirname(opt.load), "test_log.txt")
     log(log_file_path, str(vars(opt)))
 
+    if 'imagenet' in opt.dataset.lower() and 'film' in opt.task_embedding.lower():
+        # opt.film_indim = 1280
+        opt.film_indim = 2560
     # Define the models
     (embedding_net, cls_head) = get_model(opt)
     add_te_func = get_task_embedding_func(opt)
     postprocessing_net = get_postprocessing_model(opt)
     if ('imagenet' in opt.dataset.lower() and
             'film' in opt.task_embedding.lower()):
-        film_preprocess = nn.Linear(16000, 2560, False).cuda()
+        # film_preprocess = nn.Linear(16000, 2560, False).cuda()
+        film_preprocess = nn.Linear(opt.film_preprocess_input_dim,
+                                    opt.film_indim, False).cuda()
+        device_ids = list(range(len(opt.gpu.split(','))))
+        film_preprocess = torch.nn.DataParallel(film_preprocess, device_ids=device_ids)
 
     # Load saved model checkpoints
     saved_models = torch.load(opt.load)

@@ -233,6 +233,8 @@ if __name__ == '__main__':
                         help='No final ReLU layer in the backbone')
     parser.add_argument('--load-naive-backbone', action='store_true',
                         help='Load pre-trained naive backbones')
+    parser.add_argument('--second-lr', action='store_true',
+                        help='Start training from the second lr stage')
 
     opt = parser.parse_args()
 
@@ -346,8 +348,11 @@ if __name__ == '__main__':
         ]
         optimizer.param_groups[0]['params'] = new_param_list
 
-    lambda_epoch = lambda e: 1.0 if e < 20 else (
-        0.06 if e < 40 else 0.012 if e < 50 else 0.0024)
+    if opt.second_lr:
+        lambda_epoch = lambda e: 0.06
+    else:
+        lambda_epoch = lambda e: 1.0 if e < 20 else (
+            0.06 if e < 40 else 0.012 if e < 50 else 0.0024)
     lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer,
                                                      lr_lambda=lambda_epoch,
                                                      last_epoch=last_epoch)

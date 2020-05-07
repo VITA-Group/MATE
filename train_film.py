@@ -64,7 +64,7 @@ def get_model(options):
         if 'imagenet' in opt.dataset.lower():
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=5,
-                film_indim=2560, film_alpha=1.0, film_act=film_act,
+                film_indim=opt.film_indim, film_alpha=1.0, film_act=film_act,
                 final_relu=(not options.no_final_relu),
                 film_normalize=options.film_normalize,
                 dual_BN=options.dual_BN).cuda()
@@ -273,11 +273,16 @@ if __name__ == '__main__':
     log_file_path = os.path.join(opt.save_path, "train_log.txt")
     log(log_file_path, str(vars(opt)))
 
+    if 'imagenet' in opt.dataset.lower() and 'film' in opt.task_embedding.lower():
+        # opt.film_indim = 1280
+        opt.film_indim = 2560
     (embedding_net, cls_head) = get_model(opt)
     add_te_func = get_task_embedding_func(opt)
     postprocessing_net = get_postprocessing_model(opt)
     if 'imagenet' in opt.dataset.lower() and 'film' in opt.task_embedding.lower():
-        film_preprocess = nn.Linear(opt.film_preprocess_input_dim, 2560, False).cuda()
+        film_preprocess = nn.Linear(opt.film_preprocess_input_dim, opt.film_indim, False).cuda()
+        device_ids = list(range(len(opt.gpu.split(','))))
+        film_preprocess = torch.nn.DataParallel(film_preprocess, device_ids=device_ids)
 
     if opt.train_film_dualBN:
         assert not opt.fix_film
@@ -384,9 +389,6 @@ if __name__ == '__main__':
         train_losses = []
 
         for i, batch in enumerate(tqdm(dloader_train(epoch)), 1):
-            break
-            # if i == 10:
-            #     break
             data_support, labels_support, data_query, labels_query, _, _ = [
                 x.cuda() for x in batch]
             # print(data_support.size())
@@ -511,25 +513,26 @@ if __name__ == '__main__':
             acc = count_accuracy(logit_query.reshape(-1, opt.train_way),
                                  labels_query.reshape(-1))
 
-            train_accuracies.append(acc.item())
-            train_losses.append(loss.item())
+            train_accuracies.append(acc.detach().cpu().item())
+            train_losses.append(loss.detach().cpu().item())
 
             if i % 100 == 0:
                 train_acc_avg = np.mean(np.array(train_accuracies))
                 log(log_file_path,
                     'Train Epoch: {}\tBatch: [{}/{}]\tLoss: {:.4f}\tAccuracy: {:.2f} % ({:.2f} %)'.format(
-                        epoch, i, len(dloader_train), loss.item(),
-                        train_acc_avg, acc.item()))
+                        epoch, i, len(dloader_train), loss.detach().cpu().item(),
+                        train_acc_avg, acc.detach().cpu().item()))
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
         # empty cache
-        # del data_support, labels_support, data_query, labels_query
-        # del emb_support, emb_task, emb_task_temp, gram, mask
-        # del emb_query, logit_query, log_prb, smoothed_one_hot
-        # del train_losses, train_accuracies, acc, loss, loss_film_reg, loss_ortho_reg
+        del data_support, labels_support, data_query, labels_query
+        del emb_support, emb_task, emb_task_temp, gram, mask
+        del emb_query, logit_query, log_prb, smoothed_one_hot
+        del train_losses, train_accuracies, acc, loss, loss_film_reg, loss_ortho_reg
+        optimizer.zero_grad()
         torch.cuda.empty_cache()
 
         # Evaluate on the validation split
@@ -624,15 +627,14 @@ if __name__ == '__main__':
             # acc = count_accuracy(logit_query.reshape(-1, opt.test_way), labels_query.reshape(-1))
             accs = count_accuracies(logit_query, labels_query)
 
-            val_accuracies += accs.detach().cpu().tolist()
+            val_accuracies += accs.detach().cpu().numpy().tolist()
             # val_accuracies.append(acc.item())
-            val_losses.append(loss.item())
+            val_losses.append(loss.detach().cpu().item())
 
         val_acc_avg = np.mean(np.array(val_accuracies))
-        val_acc_ci95 = 1.96 * np.std(np.array(val_accuracies)) / np.sqrt(
-            opt.val_episode)
+        val_acc_ci95 = 1.96 * np.std(np.array(val_accuracies)) / np.sqrt(opt.val_episode)
 
-        val_loss_avg = np.mean(np.array(val_losses))
+        val_loss_avg = float(np.mean(np.array(val_losses)))
 
         save_dict = {
             'epoch': epoch,
@@ -686,8 +688,9 @@ if __name__ == '__main__':
             timer.measure(), timer.measure(epoch / float(opt.num_epoch))))
 
         # empty cache
-        # del data_support, labels_support, data_query, labels_query
-        # del emb_support, emb_task, G, emb_task_temp, gram, mask
-        # del emb_query, logit_query, log_prb, smoothed_one_hot
-        # del val_losses, val_acc_avg, val_acc_ci95, val_accuracies, accs, loss
+        del data_support, labels_support, data_query, labels_query
+        del emb_support, emb_task
+        del emb_query, logit_query 
+        del val_losses, val_acc_avg, val_acc_ci95, val_accuracies, accs, loss
+        del save_dict
         torch.cuda.empty_cache()

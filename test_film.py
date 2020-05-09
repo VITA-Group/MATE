@@ -274,8 +274,8 @@ if __name__ == '__main__':
 
         emb_support = embedding_net(
             data_support.reshape([-1] + list(data_support.shape[-3:])),
-            task_embedding = None,
-            n_expand = None
+            task_embedding=None,
+            n_expand=None
         )
         emb_support = emb_support.reshape(1, n_support, -1)
 

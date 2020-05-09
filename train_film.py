@@ -235,8 +235,12 @@ if __name__ == '__main__':
                         help='Load pre-trained naive backbones')
     parser.add_argument('--second-lr', action='store_true',
                         help='Start training from the second lr stage')
+    parser.add_argument('--lambda-epochs', type=str, default='20,40,50',
+                        help='How to schedule learning rate')
 
     opt = parser.parse_args()
+
+    lambda_epochs = map(int, opt.lambda_epochs.split(','))
 
     (dataset_train, dataset_val, data_loader) = get_dataset(opt)
 
@@ -356,8 +360,9 @@ if __name__ == '__main__':
     if opt.second_lr:
         lambda_epoch = lambda e: 0.06
     else:
-        lambda_epoch = lambda e: 1.0 if e < 20 else (
-            0.06 if e < 40 else 0.012 if e < 50 else 0.0024)
+        lambda_epoch = lambda e: 1.0 if e < lambda_epochs[0] else (
+            0.06 if e < lambda_epochs[1] else (
+                0.012 if e < lambda_epochs[2] else 0.0024))
     lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer,
                                                      lr_lambda=lambda_epoch,
                                                      last_epoch=last_epoch)
@@ -678,7 +683,7 @@ if __name__ == '__main__':
         #             'optimizer': optimizer.state_dict()},
         #            os.path.join(opt.save_path, 'last_epoch.pth'))
 
-        if epoch % opt.save_epoch == 0 or epoch in [21, 22, 23, 24, 25]:
+        if epoch % opt.save_epoch == 0 or epoch in [lambda_epochs[0] + jj for jj in range(6)]:
             torch.save(save_dict, os.path.join(opt.save_path,
                                                'epoch_{}.pth'.format(epoch)))
             # torch.save({'epoch': epoch,

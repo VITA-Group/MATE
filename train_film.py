@@ -235,6 +235,9 @@ if __name__ == '__main__':
                         help='Load pre-trained naive backbones')
     parser.add_argument('--second-lr', action='store_true',
                         help='Start training from the second lr stage')
+    parser.add_argument('--fix-preprocess', action='store_true',
+                        help='Fix the pre-processor of FiLM layers on '
+                             'miniImageNet dataset')
     parser.add_argument('--lambda-epochs', type=str, default='20,40,50',
                         help='How to schedule learning rate')
 
@@ -311,7 +314,8 @@ if __name__ == '__main__':
     ]
 
     if ('imagenet' in opt.dataset.lower() and
-            'film' in opt.task_embedding.lower()):
+            'film' in opt.task_embedding.lower() and
+            not opt.fix_preprocess):
         params.append({'params': film_preprocess.parameters()})
 
     optimizer = torch.optim.SGD(

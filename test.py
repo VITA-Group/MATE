@@ -13,6 +13,7 @@ from tqdm import tqdm
 from models.protonet_embedding import ProtoNetEmbedding
 from models.R2D2_embedding import R2D2Embedding
 from models.ResNet12_embedding import resnet12
+from models.resnet_rfs import resnet12_rfs
 from models.task_embedding import TaskEmbedding
 from models.postprocessing import Identity, PostProcessingNet, PostProcessingNetConv1d, PostProcessingNetConv1d_SelfAttn
 
@@ -22,6 +23,7 @@ from utils import pprint, set_gpu, Timer, count_accuracy, log
 
 import numpy as np
 import os
+
 
 def get_model(options):
     # Choose the embedding network
@@ -39,6 +41,17 @@ def get_model(options):
             network = resnet12(avg_pool=False, drop_rate=0.1, dropblock_size=2).cuda()
         # device_ids = list(range(len(options.gpu.split(','))))
         # network = torch.nn.DataParallel(network, device_ids=device_ids)
+    elif options.network == 'ResNetRFS':
+        if 'imagenet' in opt.dataset.lower():
+            network = resnet12_rfs(avg_pool=True,
+                                   drop_rate=0.1,
+                                   dropblock_size=5).cuda()
+        else:
+            network = resnet12_rfs(avg_pool=True,
+                                   drop_rate=0.1,
+                                   dropblock_size=2).cuda()
+        device_ids = list(range(len(options.gpu.split(','))))
+        network = torch.nn.DataParallel(network, device_ids=device_ids)
     else:
         print ("Cannot recognize the network type")
         assert(False)
@@ -163,10 +176,15 @@ if __name__ == '__main__':
 
     # Load saved model checkpoints
     saved_models = torch.load(opt.load)
-    embedding_net.load_state_dict(saved_models['embedding'])
-    embedding_net.eval()
-    cls_head.load_state_dict(saved_models['head'])
-    cls_head.eval()
+    if 'embedding' in saved_models.keys():
+        embedding_net.load_state_dict(saved_models['embedding'])
+        embedding_net.eval()
+    else:
+        embedding_net.load_state_dict(saved_models['model'])
+        embedding_net.eval()
+    if 'head' in saved_models.keys():
+        cls_head.load_state_dict(saved_models['head'])
+        cls_head.eval()
     if 'task_embedding' in saved_models.keys():
         add_te_func.load_state_dict(saved_models['task_embedding'])
         add_te_func.eval()

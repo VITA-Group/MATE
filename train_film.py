@@ -284,7 +284,8 @@ if __name__ == '__main__':
 
     if 'imagenet' in opt.dataset.lower() and 'film' in opt.task_embedding.lower():
         # opt.film_indim = 1280
-        opt.film_indim = 2560
+        # opt.film_indim = 2560
+        opt.film_indim = 1600
     (embedding_net, cls_head) = get_model(opt)
     add_te_func = get_task_embedding_func(opt)
     postprocessing_net = get_postprocessing_model(opt)
@@ -323,34 +324,37 @@ if __name__ == '__main__':
 
     # Load saved model checkpoints
     if opt.load is not None:
-        saved_models = torch.load(opt.load)
-        # NOTE: there is a `-1` because `epoch` starts counting from 1
-        last_epoch = saved_models[
-                         'epoch'] - 1 if 'epoch' in saved_models.keys() else -1
-        if opt.load_naive_backbone and opt.dual_BN:
-            from utils import load_from_naive_backbone
-            tgt_network = opt.network
-            opt.network = tgt_network.split('_')[0]
-            src_net, _ = get_model(opt)
-            try:
-                src_net.load_state_dict(saved_models['embedding'])
-            except RuntimeError:
-                src_net.module.load_state_dict(saved_models['embedding'])
-            load_from_naive_backbone(embedding_net, src_net)
-            opt.network = tgt_network
-            del src_net
-            # src_net = None
-        else:
-            embedding_net.load_state_dict(saved_models['embedding'])
-        cls_head.load_state_dict(saved_models['head'])
-        if 'task_embedding' in saved_models.keys():
-            add_te_func.load_state_dict(saved_models['task_embedding'])
-        if 'postprocessing' in saved_models.keys():
-            postprocessing_net.load_state_dict(saved_models['postprocessing'])
-        if 'optimizer' in saved_models.keys():
-            optimizer.load_state_dict(saved_models['optimizer'])
-        if 'film_preprocess' in saved_models.keys():
-            film_preprocess.load_state_dict(saved_models['film_preprocess'])
+        with torch.no_grad():
+            saved_models = torch.load(opt.load)
+            # NOTE: there is a `-1` because `epoch` starts counting from 1
+            last_epoch = saved_models['epoch'] - 1 if 'epoch' in saved_models.keys() else -1
+            if opt.load_naive_backbone and opt.dual_BN:
+                from utils import load_from_naive_backbone
+                tgt_network = opt.network
+                opt.network = tgt_network.split('_')[0]
+                src_net, _ = get_model(opt)
+                try:
+                    src_net.load_state_dict(saved_models['embedding'])
+                except RuntimeError:
+                    src_net.module.load_state_dict(saved_models['embedding'])
+                load_from_naive_backbone(embedding_net, src_net)
+                opt.network = tgt_network
+                del src_net
+                # src_net = None
+            else:
+                embedding_net.load_state_dict(saved_models['embedding'])
+            cls_head.load_state_dict(saved_models['head'])
+            if 'task_embedding' in saved_models.keys():
+                add_te_func.load_state_dict(saved_models['task_embedding'])
+            if 'postprocessing' in saved_models.keys():
+                postprocessing_net.load_state_dict(saved_models['postprocessing'])
+            if 'optimizer' in saved_models.keys():
+                optimizer.load_state_dict(saved_models['optimizer'])
+            if 'film_preprocess' in saved_models.keys():
+                film_preprocess.load_state_dict(saved_models['film_preprocess'])
+            del saved_models
+            torch.cuda.empty_cache()
+
     else:
         last_epoch = -1
 
@@ -403,6 +407,8 @@ if __name__ == '__main__':
         train_losses = []
 
         for i, batch in enumerate(tqdm(dloader_train(epoch)), 1):
+            # if i == 10:
+            #     break
             data_support, labels_support, data_query, labels_query, _, _ = [
                 x.cuda() for x in batch]
             # print(data_support.size())
@@ -562,24 +568,30 @@ if __name__ == '__main__':
                 if opt.val_episodes_per_batch == 1 else embedding_net
 
         for i, batch in enumerate(tqdm(dloader_val(epoch)), 1):
+            # if i == 10:
+            #     break
             data_support, labels_support, data_query, labels_query, _, _ = [
                 x.cuda() for x in batch]
 
             test_n_support = opt.test_way * opt.val_shot
             test_n_query = opt.test_way * opt.val_query
 
-            emb_support = embedding_net_temp(
-            # emb_support = embedding_net(
-                data_support.reshape([-1] + list(data_support.shape[-3:])),
-                task_embedding=None,
-                n_expand=None
-            )
-            # emb_support = emb_support.reshape(1, test_n_support, -1)
-            emb_support = emb_support.reshape(opt.val_episodes_per_batch,
-                                              test_n_support, -1)
-            # emb_query = embedding_net(data_query.reshape([-1] + list(data_query.shape[-3:])))
-            # emb_query = emb_query.reshape(1, test_n_query, -1)
+            with torch.no_grad():
+                emb_support = embedding_net_temp(
+                # emb_support = embedding_net(
+                    data_support.reshape([-1] + list(data_support.shape[-3:])),
+                    task_embedding=None,
+                    n_expand=None
+                )
+                # emb_support = emb_support.reshape(1, test_n_support, -1)
+                emb_support = emb_support.reshape(opt.val_episodes_per_batch,
+                                                  test_n_support, -1)
+                # emb_query = embedding_net(data_query.reshape([-1] + list(data_query.shape[-3:])))
+                # emb_query = emb_query.reshape(1, test_n_query, -1)
 
+            # emb_support = emb_support.clone()
+            # emb_support.retain_grad()
+            emb_support.requires_grad_()
             if epoch > opt.start_epoch:
                 assert ('FiLM' in opt.task_embedding)
                 emb_task, G = add_te_func(
@@ -590,60 +602,60 @@ if __name__ == '__main__':
             else:
                 emb_task, G = None, None
 
-            # Forward pass for support samples with task embeddings
-            if emb_task is not None:
-                # emb_task_support_batch = emb_task.expand(-1, test_n_support, -1)
-                emb_support = embedding_net_temp(
-                # emb_support = embedding_net(
-                    data_support.reshape([-1] + list(data_support.shape[-3:])),
-                    task_embedding=emb_task,
-                    n_expand=test_n_support
-                )
-            else:
-                emb_support = embedding_net_temp(
-                # emb_support = embedding_net(
-                    data_support.reshape([-1] + list(data_support.shape[-3:])),
-                    task_embedding=None,
-                    n_expand=None
-                )
-            # emb_support = postprocessing_net(emb_support.reshape([-1] + list(emb_support.size()[2:])))
-            emb_support = emb_support.reshape(opt.val_episodes_per_batch,
-                                              test_n_support, -1)
+            with torch.no_grad():
+                # Forward pass for support samples with task embeddings
+                if emb_task is not None:
+                    # emb_task_support_batch = emb_task.expand(-1, test_n_support, -1)
+                    emb_support = embedding_net_temp(
+                    # emb_support = embedding_net(
+                        data_support.reshape([-1] + list(data_support.shape[-3:])),
+                        task_embedding=emb_task,
+                        n_expand=test_n_support
+                    )
+                else:
+                    emb_support = embedding_net_temp(
+                    # emb_support = embedding_net(
+                        data_support.reshape([-1] + list(data_support.shape[-3:])),
+                        task_embedding=None,
+                        n_expand=None
+                    )
+                # emb_support = postprocessing_net(emb_support.reshape([-1] + list(emb_support.size()[2:])))
+                emb_support = emb_support.reshape(opt.val_episodes_per_batch,
+                                                  test_n_support, -1)
 
-            # Forward pass for query samples with task embeddings
-            if emb_task is not None:
-                # emb_task_query_batch = emb_task.expand(-1, test_n_query, -1)
-                emb_query = embedding_net_temp(
-                # emb_query = embedding_net(
-                    data_query.reshape([-1] + list(data_query.shape[-3:])),
-                    task_embedding=emb_task,
-                    n_expand=test_n_query
-                )
-            else:
-                emb_query = embedding_net_temp(
-                # emb_query = embedding_net(
-                    data_query.reshape([-1] + list(data_query.shape[-3:])),
-                    task_embedding=None,
-                    n_expand=None
-                )
-            # emb_query = postprocessing_net(emb_query.reshape([-1] + list(emb_query.size()[2:])))
-            emb_query = emb_query.reshape(opt.val_episodes_per_batch,
-                                          test_n_query, -1)
+                # Forward pass for query samples with task embeddings
+                if emb_task is not None:
+                    # emb_task_query_batch = emb_task.expand(-1, test_n_query, -1)
+                    emb_query = embedding_net_temp(
+                    # emb_query = embedding_net(
+                        data_query.reshape([-1] + list(data_query.shape[-3:])),
+                        task_embedding=emb_task,
+                        n_expand=test_n_query
+                    )
+                else:
+                    emb_query = embedding_net_temp(
+                    # emb_query = embedding_net(
+                        data_query.reshape([-1] + list(data_query.shape[-3:])),
+                        task_embedding=None,
+                        n_expand=None
+                    )
+                # emb_query = postprocessing_net(emb_query.reshape([-1] + list(emb_query.size()[2:])))
+                emb_query = emb_query.reshape(opt.val_episodes_per_batch, test_n_query, -1)
 
-            # emb_support = postprocessing_net(emb_support)
-            # emb_query = postprocessing_net(emb_query)
+                # emb_support = postprocessing_net(emb_support)
+                # emb_query = postprocessing_net(emb_query)
 
-            logit_query = cls_head(emb_query, emb_support, labels_support,
-                                   opt.test_way, opt.val_shot)
+                logit_query = cls_head(emb_query, emb_support, labels_support,
+                                       opt.test_way, opt.val_shot)
 
-            loss = x_entropy(logit_query.reshape(-1, opt.test_way),
-                             labels_query.reshape(-1))
-            # acc = count_accuracy(logit_query.reshape(-1, opt.test_way), labels_query.reshape(-1))
-            accs = count_accuracies(logit_query, labels_query)
+                loss = x_entropy(logit_query.reshape(-1, opt.test_way),
+                                 labels_query.reshape(-1))
+                # acc = count_accuracy(logit_query.reshape(-1, opt.test_way), labels_query.reshape(-1))
+                accs = count_accuracies(logit_query, labels_query)
 
-            val_accuracies += accs.detach().cpu().numpy().tolist()
-            # val_accuracies.append(acc.item())
-            val_losses.append(loss.detach().cpu().item())
+                val_accuracies += accs.detach().cpu().numpy().tolist()
+                # val_accuracies.append(acc.item())
+                val_losses.append(loss.detach().cpu().item())
 
         val_acc_avg = np.mean(np.array(val_accuracies))
         val_acc_ci95 = 1.96 * np.std(np.array(val_accuracies)) / np.sqrt(opt.val_episode)

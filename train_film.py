@@ -367,6 +367,8 @@ if __name__ == '__main__':
                 tgt_network = opt.network
                 opt.network = tgt_network.split('_')[0]
                 src_net, _ = get_model(opt)
+                sd = saved_models['embedding'] if 'embedding' in saved_models.keys() \
+                    else saved_models['model']
                 try:
                     src_net.load_state_dict(saved_models['embedding'])
                 except RuntimeError:

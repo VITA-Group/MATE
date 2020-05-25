@@ -367,15 +367,15 @@ if __name__ == '__main__':
                 tgt_network = opt.network
                 opt.network = tgt_network.split('_')[0]
                 src_net, _ = get_model(opt)
-                sd = saved_models['embedding'] if 'embedding' in saved_models.keys() \
+                embedding_sd = saved_models['embedding'] if 'embedding' in saved_models.keys() \
                     else saved_models['model']
                 try:
-                    src_net.load_state_dict(saved_models['embedding'])
+                    src_net.load_state_dict(embedding_sd)
                 except RuntimeError:
-                    src_net.module.load_state_dict(saved_models['embedding'])
+                    src_net.module.load_state_dict(embedding_sd)
                 load_from_naive_backbone(embedding_net, src_net)
                 opt.network = tgt_network
-                del src_net
+                del src_net, embedding_sd
                 # src_net = None
             else:
                 embedding_net.load_state_dict(saved_models['embedding'])

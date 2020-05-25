@@ -379,7 +379,8 @@ if __name__ == '__main__':
                 # src_net = None
             else:
                 embedding_net.load_state_dict(saved_models['embedding'])
-            cls_head.load_state_dict(saved_models['head'])
+            if 'head' in saved_models.keys():
+                cls_head.load_state_dict(saved_models['head'])
             if 'task_embedding' in saved_models.keys():
                 add_te_func.load_state_dict(saved_models['task_embedding'])
             if 'postprocessing' in saved_models.keys():

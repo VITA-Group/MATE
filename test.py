@@ -37,8 +37,8 @@ def get_model(options):
             # network = torch.nn.DataParallel(network, device_ids=[0, 1, 2, 3])
         else:
             network = resnet12(avg_pool=False, drop_rate=0.1, dropblock_size=2).cuda()
-        device_ids = list(range(len(options.gpu.split(','))))
-        network = torch.nn.DataParallel(network, device_ids=device_ids)
+        # device_ids = list(range(len(options.gpu.split(','))))
+        # network = torch.nn.DataParallel(network, device_ids=device_ids)
     else:
         print ("Cannot recognize the network type")
         assert(False)
@@ -90,7 +90,7 @@ def get_task_embedding_func(options):
     te_func = TaskEmbedding(metric=options.task_embedding, **te_args).cuda()
 
     device_ids = list(range(len(options.gpu.split(','))))
-    te_func = torch.nn.DataParallel(te_func, device_ids=device_ids)
+    # te_func = torch.nn.DataParallel(te_func, device_ids=device_ids)
 
     return te_func
 
@@ -101,7 +101,7 @@ def get_postprocessing_model(options):
     if options.post_processing == 'Conv1d':
         postprocessing_net = PostProcessingNetConv1d().cuda()
         device_ids = list(range(len(options.gpu.split(','))))
-        postprocessing_net = torch.nn.DataParallel(postprocessing_net, device_ids=device_ids)
+        # postprocessing_net = torch.nn.DataParallel(postprocessing_net, device_ids=device_ids)
         return postprocessing_net
     if options.post_processing == 'Conv1d_SelfAttn':
         postprocessing_net = PostProcessingNetConv1d_SelfAttn(dataset=options.dataset).cuda()
@@ -185,6 +185,9 @@ if __name__ == '__main__':
 
         emb_support = embedding_net(data_support.reshape([-1] + list(data_support.shape[-3:])))
         emb_support = emb_support.reshape(1, n_support, -1)
+        np.save('./emb_support_baseline_1.npy', emb_support.detach().cpu().numpy())
+        # print(labels_support)
+        # exit()
 
         emb_query = embedding_net(data_query.reshape([-1] + list(data_query.shape[-3:])))
         emb_query = emb_query.reshape(1, n_query, -1)

@@ -1,14 +1,14 @@
 # MPI cluster submit
 condor_submit_bid 250 -interactive -append 'request_cpus = 8' -append 'request_memory = 12000' \
-  -append 'request_GPUs = 2' -append 'requirements = TARGET.CUDAGlobalMemoryMb > 15000'
+  -append 'request_gpus = 2' -append 'requirements = TARGET.CUDAGlobalMemoryMb > 15000'
 
 # MPI cluster submit miniImageNet
 condor_submit_bid 250 -interactive -append 'request_cpus = 8' -append 'request_memory = 16000' \
-  -append 'request_GPUs = 4' -append 'requirements = TARGET.CUDAGlobalMemoryMb > 30000'
+  -append 'request_gpus = 4' -append 'requirements = TARGET.CUDAGlobalMemoryMb > 30000'
 
 # Testing
 condor_submit_bid 250 -interactive -append 'request_cpus = 8' -append 'request_memory = 12000' \
-  -append 'request_GPUs = 1' -append 'requirements = TARGET.CUDAGlobalMemoryMb > 15000'
+  -append 'request_gpus = 1' -append 'requirements = TARGET.CUDAGlobalMemoryMb > 15000'
 
 # ==============================================================================
 # Training
@@ -49,6 +49,11 @@ python train_film.py --gpu 0,1 \
 # ==============================================================================
 # Testing
 # ==============================================================================
+
+# Test for accuracy - Baseline
+python test.py --gpu 0  --episode 1000 --way 5 --shot 5 --query 15 \
+  --head SVM --network ResNet --dataset CIFAR_FS \
+  --load ./experiments/CIFAR_FS_MetaOptNet_SVM_baseline/epoch_22.pth
 
 # Test for accuracy - FiLM
 python test_film.py --gpu 0 --episode 1000 --way 5 --shot 5 --query 15 --dataset CIFAR_FS \

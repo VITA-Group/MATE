@@ -46,14 +46,11 @@ class Bottleneck(nn.Module):
         if self.downsample:
             self.conv_ds = nn.Conv2d(inplanes, planes * self.expansion,
                                      kernel_size=1, stride=1, bias=False)
-            if dual_BN:
-                self.bn_ds = DualBN2d(planes * self.expansion)
-            else:
-                self.bn_ds = nn.BatchNorm2d(planes * self.expansion)
+            self.bn_ds = DualBN2d(planes * self.expansion) if dual_BN \
+                else nn.BatchNorm2d(planes * self.expansion)
             self.film_ds = FiLM_Layer(
                 planes * self.expansion, in_channels=film_indim,
                 alpha=film_alpha, activation=film_act)
-
 
     def forward(self, x, task_embedding):
         residual = x
@@ -76,7 +73,10 @@ class Bottleneck(nn.Module):
         #     residual = self.downsample(x)
         if self.downsample:
             residual = self.conv_ds(x)
-            residual = self.bn_ds(residual, task_embedding) if self.dual_BN else self.bn_ds(residual)
+            if self.dual_BN:
+                residual = self.bn_ds(residual, task_embedding)
+            else:
+                self.bn_ds(residual)
             residual = self.film_ds(residual, task_embedding)
 
         out += residual

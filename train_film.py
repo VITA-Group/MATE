@@ -15,6 +15,8 @@ from models.R2D2_embedding import R2D2Embedding
 from models.protonet_embedding import ProtoNetEmbedding
 from models.ResNet12_embedding import resnet12
 from models.ResNet12_FiLM_embedding import resnet12_film
+from models.resnet_rfs import resnet12_rfs
+from models.resnet_rfs_film import resnet12_rfs_film
 from models.task_embedding import TaskEmbedding
 from models.postprocessing import Identity, PostProcessingNet, \
     PostProcessingNetConv1d, PostProcessingNetConv1d_SelfAttn
@@ -59,6 +61,17 @@ def get_model(options):
                                dropblock_size=2).cuda()
         device_ids = list(range(len(options.gpu.split(','))))
         network = torch.nn.DataParallel(network, device_ids=device_ids)
+    elif options.network == 'ResNetRFS':
+        if 'imagenet' in opt.dataset.lower():
+            network = resnet12_rfs(avg_pool=True,
+                                   drop_rate=0.1,
+                                   dropblock_size=5).cuda()
+        else:
+            network = resnet12_rfs(avg_pool=True,
+                                   drop_rate=0.1,
+                                   dropblock_size=2).cuda()
+        device_ids = list(range(len(options.gpu.split(','))))
+        network = torch.nn.DataParallel(network, device_ids=device_ids)
     elif options.network == 'ResNet_FiLM':
         film_act = None if options.no_film_activation else F.leaky_relu
         if 'imagenet' in opt.dataset.lower():
@@ -73,6 +86,24 @@ def get_model(options):
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=2,
                 film_indim=2560, film_alpha=1.0, film_act=film_act,
+                final_relu=(not options.no_final_relu),
+                film_normalize=options.film_normalize,
+                dual_BN=options.dual_BN).cuda()
+        device_ids = list(range(len(options.gpu.split(','))))
+        network = torch.nn.DataParallel(network, device_ids=device_ids)
+    elif options.network == 'ResNetRFS_FiLM':
+        film_act = None if options.no_film_activation else F.leaky_relu
+        if 'imagenet' in opt.dataset.lower():
+            network = resnet12_rfs_film(
+                avg_pool=True, drop_rate=0.1, dropblock_size=5,
+                film_indim=640, film_alpha=1.0, film_act=film_act,
+                final_relu=(not options.no_final_relu),
+                film_normalize=options.film_normalize,
+                dual_BN=options.dual_BN).cuda()
+        else:
+            network = resnet12_rfs_film(
+                avg_pool=True, drop_rate=0.1, dropblock_size=2,
+                film_indim=640, film_alpha=1.0, film_act=film_act,
                 final_relu=(not options.no_final_relu),
                 film_normalize=options.film_normalize,
                 dual_BN=options.dual_BN).cuda()
@@ -282,13 +313,20 @@ if __name__ == '__main__':
     log_file_path = os.path.join(opt.save_path, "train_log.txt")
     log(log_file_path, str(vars(opt)))
 
-    if 'imagenet' in opt.dataset.lower() and 'film' in opt.task_embedding.lower():
+    if 'imagenet' in opt.dataset.lower() and 'film' in opt.task_embedding.lower() \
+            and 'rfs' not in opt.network.lower():
         # opt.film_indim = 1280
+        opt.film_indim = 2560
+    elif 'rfs' in opt.network.lower():
+        opt.film_indim = 640
+    else:
         opt.film_indim = 2560
     (embedding_net, cls_head) = get_model(opt)
     add_te_func = get_task_embedding_func(opt)
     postprocessing_net = get_postprocessing_model(opt)
-    if 'imagenet' in opt.dataset.lower() and 'film' in opt.task_embedding.lower():
+    opt.film_preprocess = 'imagenet' in opt.dataset.lower() and \
+        'film' in opt.task_embedding.lower() and 'rfs' not in opt.network.lower()
+    if opt.film_preprocess:
         film_preprocess = nn.Linear(opt.film_preprocess_input_dim, opt.film_indim, False).cuda()
         device_ids = list(range(len(opt.gpu.split(','))))
         film_preprocess = torch.nn.DataParallel(film_preprocess, device_ids=device_ids)
@@ -313,9 +351,7 @@ if __name__ == '__main__':
         {'params': postprocessing_net.parameters()}
     ]
 
-    if ('imagenet' in opt.dataset.lower() and
-            'film' in opt.task_embedding.lower() and
-            not opt.fix_preprocess):
+    if opt.film_preprocess and not opt.fix_preprocess:
         params.append({'params': film_preprocess.parameters()})
 
     optimizer = torch.optim.SGD(
@@ -396,7 +432,7 @@ if __name__ == '__main__':
             for m in embedding_net.modules():
                 if isinstance(m, DualBN2d):
                     m.BN_none.eval()
-        if 'imagenet' in opt.dataset.lower():
+        if opt.film_preprocess:
             film_preprocess.train()
 
         train_accuracies = []
@@ -436,7 +472,7 @@ if __name__ == '__main__':
                 emb_task, _ = add_te_func(
                     emb_support, labels_support, opt.train_way, opt.train_shot,
                     opt.wgrad_prune_ratio)
-                if 'imagenet' in opt.dataset.lower():
+                if opt.film_preprocess:
                     emb_task = film_preprocess(emb_task.squeeze(1)).unsqueeze(1)
             else:
                 emb_task, _ = None, None
@@ -552,7 +588,7 @@ if __name__ == '__main__':
         # Evaluate on the validation split
         _, _, _, _ = [x.eval() for x in
                       (embedding_net, cls_head, add_te_func, postprocessing_net)]
-        if 'imagenet' in opt.dataset.lower():
+        if opt.film_preprocess:
             film_preprocess.eval()
 
         val_accuracies = []
@@ -585,7 +621,7 @@ if __name__ == '__main__':
                 emb_task, G = add_te_func(
                     emb_support, labels_support, opt.test_way, opt.val_shot,
                     opt.wgrad_prune_ratio)
-                if 'imagenet' in opt.dataset.lower():
+                if opt.film_preprocess:
                     emb_task = film_preprocess(emb_task.squeeze(1)).unsqueeze(1)
             else:
                 emb_task, G = None, None
@@ -658,7 +694,7 @@ if __name__ == '__main__':
             'postprocessing': postprocessing_net.state_dict(),
             'optimizer': optimizer.state_dict()
         }
-        if 'imagenet' in opt.dataset.lower() and 'film' in opt.task_embedding.lower():
+        if opt.film_preprocess:
             save_dict['film_preprocess'] = film_preprocess.state_dict()
         if val_acc_avg > max_val_acc:
             max_val_acc = val_acc_avg

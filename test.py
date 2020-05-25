@@ -50,8 +50,8 @@ def get_model(options):
             network = resnet12_rfs(avg_pool=True,
                                    drop_rate=0.1,
                                    dropblock_size=2).cuda()
-        device_ids = list(range(len(options.gpu.split(','))))
-        network = torch.nn.DataParallel(network, device_ids=device_ids)
+        # device_ids = list(range(len(options.gpu.split(','))))
+        # network = torch.nn.DataParallel(network, device_ids=device_ids)
     else:
         print ("Cannot recognize the network type")
         assert(False)
@@ -177,7 +177,10 @@ if __name__ == '__main__':
     # Load saved model checkpoints
     saved_models = torch.load(opt.load)
     if 'embedding' in saved_models.keys():
-        embedding_net.load_state_dict(saved_models['embedding'])
+        try:
+            embedding_net.load_state_dict(saved_models['embedding'])
+        except RuntimeError:
+            embedding_net.module.load_state(saved_models['embedding'])
         embedding_net.eval()
     else:
         embedding_net.load_state_dict(saved_models['model'])

@@ -14,6 +14,8 @@ from models.protonet_embedding import ProtoNetEmbedding
 from models.R2D2_embedding import R2D2Embedding
 from models.ResNet12_embedding import resnet12
 from models.ResNet12_FiLM_embedding import resnet12_film, ResNet_FiLM
+from models.resnet_rfs import resnet12_rfs
+from models.resnet_rfs_film import resnet12_rfs_film
 from models.task_embedding import TaskEmbedding
 from models.postprocessing import Identity, PostProcessingNet, PostProcessingNetConv1d, PostProcessingNetConv1d_SelfAttn
 
@@ -45,6 +47,17 @@ def get_model(options):
                                dropblock_size=2).cuda()
         device_ids = list(range(len(options.gpu.split(','))))
         network = torch.nn.DataParallel(network, device_ids=device_ids)
+    elif options.network == 'ResNetRFS':
+        if 'imagenet' in opt.dataset.lower():
+            network = resnet12_rfs(avg_pool=True,
+                                   drop_rate=0.1,
+                                   dropblock_size=5).cuda()
+        else:
+            network = resnet12_rfs(avg_pool=True,
+                                   drop_rate=0.1,
+                                   dropblock_size=2).cuda()
+        device_ids = list(range(len(options.gpu.split(','))))
+        network = torch.nn.DataParallel(network, device_ids=device_ids)
     elif options.network == 'ResNet_FiLM':
         film_act = None if options.no_film_activation else F.leaky_relu
         if 'imagenet' in options.dataset.lower():
@@ -61,6 +74,24 @@ def get_model(options):
                 film_indim=2560, film_alpha=1.0, film_act=film_act,
                 final_relu=(not opt.no_final_relu),
                 film_normalize=opt.film_normalize,
+                dual_BN=options.dual_BN).cuda()
+        device_ids = list(range(len(options.gpu.split(','))))
+        network = torch.nn.DataParallel(network, device_ids=device_ids)
+    elif options.network == 'ResNetRFS_FiLM':
+        film_act = None if options.no_film_activation else F.leaky_relu
+        if 'imagenet' in opt.dataset.lower():
+            network = resnet12_rfs_film(
+                avg_pool=True, drop_rate=0.1, dropblock_size=5,
+                film_indim=640, film_alpha=1.0, film_act=film_act,
+                final_relu=(not options.no_final_relu),
+                film_normalize=options.film_normalize,
+                dual_BN=options.dual_BN).cuda()
+        else:
+            network = resnet12_rfs_film(
+                avg_pool=True, drop_rate=0.1, dropblock_size=2,
+                film_indim=640, film_alpha=1.0, film_act=film_act,
+                final_relu=(not options.no_final_relu),
+                film_normalize=options.film_normalize,
                 dual_BN=options.dual_BN).cuda()
         device_ids = list(range(len(options.gpu.split(','))))
         network = torch.nn.DataParallel(network, device_ids=device_ids)

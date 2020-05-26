@@ -239,15 +239,20 @@ if __name__ == '__main__':
     log_file_path = os.path.join(os.path.dirname(opt.load), "test_log.txt")
     log(log_file_path, str(vars(opt)))
 
-    if 'imagenet' in opt.dataset.lower() and 'film' in opt.task_embedding.lower():
-        # opt.film_indim = 1280
+    if 'imagenet' in opt.dataset.lower() and 'film' in opt.task_embedding.lower() \
+            and 'rfs' not in opt.network.lower():
+        opt.film_indim = 1600
+    elif 'rfs' in opt.network.lower():
+        opt.film_indim = 640
+    else:
         opt.film_indim = 2560
     # Define the models
     (embedding_net, cls_head) = get_model(opt)
     add_te_func = get_task_embedding_func(opt)
     postprocessing_net = get_postprocessing_model(opt)
-    if ('imagenet' in opt.dataset.lower() and
-            'film' in opt.task_embedding.lower()):
+    opt.film_preprocess = 'imagenet' in opt.dataset.lower() and \
+                          'film' in opt.task_embedding.lower() and 'rfs' not in opt.network.lower()
+    if opt.film_preprocess:
         # film_preprocess = nn.Linear(16000, 2560, False).cuda()
         film_preprocess = nn.Linear(opt.film_preprocess_input_dim,
                                     opt.film_indim, False).cuda()
@@ -320,7 +325,7 @@ if __name__ == '__main__':
         assert('FiLM' in opt.task_embedding)
         emb_task, _ = add_te_func(
             emb_support, labels_support, opt.way, opt.shot, opt.wgrad_prune_ratio)
-        if 'imagenet' in opt.dataset.lower():
+        if opt.film_preprocess:
             emb_task = film_preprocess(emb_task.squeeze(1)).unsqueeze(1)
         # print(emb_task[0,0,:30])
         # print(emb_task * 10**5)

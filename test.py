@@ -71,7 +71,7 @@ def get_model(options):
         cls_head = ClassificationHead(base_learner='Ridge').cuda()
     elif opt.head == 'R2D2':
         cls_head = ClassificationHead(base_learner='R2D2').cuda()
-    elif opt.head == 'SVM':
+    elif opt.head == 'SVM' or 'LR':
         cls_head = ClassificationHead(base_learner='SVM-CS').cuda()
     elif options.head == 'SVM-BiP':
         cls_head = ClassificationHead(base_learner='SVM-CS-BiP').cuda()

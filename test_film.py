@@ -19,6 +19,8 @@ from models.resnet_rfs_film import resnet12_rfs_film
 from models.task_embedding import TaskEmbedding
 from models.postprocessing import Identity, PostProcessingNet, PostProcessingNetConv1d, PostProcessingNetConv1d_SelfAttn
 
+from sklearn import metrics
+from sklearn.linear_model import LogisticRegression
 from models.classification_heads import ClassificationHead
 
 from utils import pprint, set_gpu, Timer, count_accuracy, log
@@ -26,6 +28,11 @@ from utils import pprint, set_gpu, Timer, count_accuracy, log
 import numpy as np
 import os
 
+
+def normalize(x):
+    norm = x.pow(2).sum(1, keepdim=True).pow(1. / 2)
+    out = x.div(norm)
+    return out
 
 def get_model(options):
     # Choose the embedding network
@@ -106,7 +113,7 @@ def get_model(options):
         cls_head = ClassificationHead(base_learner='Ridge').cuda()
     elif opt.head == 'R2D2':
         cls_head = ClassificationHead(base_learner='R2D2').cuda()
-    elif opt.head == 'SVM':
+    elif opt.head == 'SVM' or opt.head == 'LR':
         cls_head = ClassificationHead(base_learner='SVM-CS').cuda()
     elif options.head == 'SVM-BiP':
         cls_head = ClassificationHead(base_learner='SVM-CS-BiP').cuda()
@@ -378,12 +385,28 @@ if __name__ == '__main__':
 
         if opt.head == 'SVM':
             logits = cls_head(emb_query, emb_support, labels_support, opt.way, opt.shot, maxIter=3)
-            # logits = cls_head(emb_query, emb_support, labels_support, opt.way, opt.shot)
+            acc = count_accuracy(logits.reshape(-1, opt.way), labels_query.reshape(-1)).item()
+        elif opt.head == 'LR':
+            assert emb_support.size(0) == 1
+            emb_support = normalize(emb_support.squeeze(0)).detach().cpu().numpy()
+            emb_query = normalize(emb_query.squeeze(0)).detach().cpu().numpy()
+            labels_support = labels_support.view(-1).detach().cpu().numpy()
+            labels_query = labels_query.view(-1).detach().cpu().numpy()
+            clf = LogisticRegression(random_state=0,
+                                     solver='lbfgs',
+                                     max_iter=1000,
+                                     multi_class='multinomial')
+            clf.fit(emb_support, labels_support)
+            pred_query = clf.predict(emb_query)
+            acc = metrics.accuracy_score(labels_query, pred_query) * 100
         else:
             logits = cls_head(emb_query, emb_support, labels_support, opt.way, opt.shot)
+            acc = count_accuracy(logits.reshape(-1, opt.way), labels_query.reshape(-1)).item()
 
-        acc = count_accuracy(logits.reshape(-1, opt.way), labels_query.reshape(-1))
-        test_accuracies.append(acc.item())
+        test_accuracies.append(acc)
+
+        # acc = count_accuracy(logits.reshape(-1, opt.way), labels_query.reshape(-1))
+        # test_accuracies.append(acc.item())
 
         avg = np.mean(np.array(test_accuracies))
         std = np.std(np.array(test_accuracies))

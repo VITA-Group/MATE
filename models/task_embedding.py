@@ -161,7 +161,7 @@ class TaskEmbedding_FiLM_SVM_WGrad(nn.Module):
         # print(labels_support)
         # print(G)
         # np.save('./emb_support.npy', emb_support.detach().cpu().numpy())
-        # np.save('./G.npy', G.detach().cpu().numpy())
+        # np.save('./G_train-film-dualBN.npy', G.detach().cpu().numpy())
         # np.save('./G_labels.npy', labels_support.detach().cpu().numpy())
 
         # Compute task features

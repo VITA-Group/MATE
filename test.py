@@ -251,12 +251,12 @@ if __name__ == '__main__':
                                      multi_class='multinomial')
             clf.fit(emb_support, labels_support)
             pred_query = clf.predict(emb_query)
-            acc = metrics.accuracy_score(labels_query, pred_query)
+            acc = metrics.accuracy_score(labels_query, pred_query) * 100
         else:
             logits = cls_head(emb_query, emb_support, labels_support, opt.way, opt.shot)
             acc = count_accuracy(logits.reshape(-1, opt.way), labels_query.reshape(-1)).item()
 
-        test_accuracies.append(acc.item())
+        test_accuracies.append(acc)
 
         avg = np.mean(np.array(test_accuracies))
         std = np.std(np.array(test_accuracies))

@@ -223,7 +223,7 @@ class TaskEmbedding(nn.Module):
         super(TaskEmbedding, self).__init__()
         if ('KME' in metric):
             self.te_func = TaskEmbedding_KME
-        if ('FiLM_KME' in metric):
+        elif ('FiLM_KME' in metric):
             self.te_func = TaskEmbedding_FiLM_KME
         elif ('Cosine' in metric):
             self.te_func = TaskEmbedding_Cosine

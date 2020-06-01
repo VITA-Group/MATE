@@ -32,6 +32,7 @@ def TaskEmbedding_KME(emb_support, emb_query, *args):
     # NOTE: `None` in the return statement is preserved for G
     return augmented_support, augmented_query, None, None
 
+
 def TaskEmbedding_FiLM_KME(emb_support, *args):
     emb_task = emb_support.mean(dim=1, keepdim=True)
     return emb_task, None
@@ -221,9 +222,9 @@ class TaskEmbedding_Entropy_SVMHead_NoGrad(nn.Module):
 class TaskEmbedding(nn.Module):
     def __init__(self, metric='None', dataset='MiniImageNet'):
         super(TaskEmbedding, self).__init__()
-        if ('KME' in metric):
+        if ('KME' == metric):
             self.te_func = TaskEmbedding_KME
-        elif ('FiLM_KME' in metric):
+        elif ('FiLM_KME' == metric):
             self.te_func = TaskEmbedding_FiLM_KME
         elif ('Cosine' in metric):
             self.te_func = TaskEmbedding_Cosine

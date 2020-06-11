@@ -189,10 +189,22 @@ if __name__ == '__main__':
 
     # Load saved model checkpoints
     saved_models = torch.load(opt.load)
-    embedding_net.load_state_dict(saved_models['embedding'])
-    embedding_net.eval()
-    cls_head.load_state_dict(saved_models['head'])
-    cls_head.eval()
+    # embedding_net.load_state_dict(saved_models['embedding'])
+    # embedding_net.eval()
+    # cls_head.load_state_dict(saved_models['head'])
+    # cls_head.eval()
+    if 'embedding' in saved_models.keys():
+        try:
+            embedding_net.load_state_dict(saved_models['embedding'])
+        except RuntimeError:
+            embedding_net.module.load_state(saved_models['embedding'])
+        embedding_net.eval()
+    else:
+        embedding_net.load_state_dict(saved_models['model'])
+        embedding_net.eval()
+    if 'head' in saved_models.keys():
+        cls_head.load_state_dict(saved_models['head'])
+        cls_head.eval()
     if 'task_embedding' in saved_models.keys():
         add_te_func.load_state_dict(saved_models['task_embedding'])
         add_te_func.eval()

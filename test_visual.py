@@ -157,9 +157,13 @@ if __name__ == '__main__':
                             help='choose which type of task embedding will be used')
     parser.add_argument('--post-processing', type=str, default='None',
                             help='use an extra post processing net for sample embeddings')
+    parser.add_argument('--savedir', type=str, help='directory to save generated features')
 
     opt = parser.parse_args()
     (dataset_test, data_loader) = get_dataset(opt)
+
+    if not os.path.isdir(opt.savedir):
+        os.mkdir(opt.savedir)
 
     dloader_test = data_loader(
         dataset=dataset_test,
@@ -233,9 +237,16 @@ if __name__ == '__main__':
         emb_query_np = emb_query.detach().cpu().numpy()
         labels_query_np = labels_query.detach().cpu().numpy()
         Kall_np = Kall.detach().cpu().numpy()
-        d = dict(emb_support=emb_support_np, emb_query=emb_query_np, labels_support=labels_support_np,
-                labels_query=labels_query_np, Kall=Kall_np)
-        np.savez('./emb_entropy_visual/eps_{}.npz'.format(i), **d)
+        d = dict(
+            emb_support_nofilm=None,
+            emb_support=emb_support_np,
+            emb_query_nofilm=None,
+            emb_query=emb_query_np,
+            emb_task=None,
+            labels_support=labels_support_np,
+            labels_query=labels_query_np,
+            Kall=Kall_np)
+        np.savez(os.path.join(opt.savedir, 'eps_{}.npz'.format(i)), **d)
         continue
 
         # emb_support = postprocessing_net(emb_support)

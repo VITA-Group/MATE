@@ -197,7 +197,7 @@ if __name__ == '__main__':
         try:
             embedding_net.load_state_dict(saved_models['embedding'])
         except RuntimeError:
-            embedding_net.module.load_state(saved_models['embedding'])
+            embedding_net.module.load_state_dict(saved_models['embedding'])
         embedding_net.eval()
     else:
         embedding_net.load_state_dict(saved_models['model'])

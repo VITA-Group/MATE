@@ -172,6 +172,46 @@ class TaskEmbedding_FiLM_SVM_WGrad(nn.Module):
         return emb_task, wgrad
 
 
+class TaskEmbedding_FiLM_SVM_OnW(nn.Module):
+    def __init__(self):
+        super(TaskEmbedding_FiLM_SVM_OnW, self).__init__()
+        self.cls_head = ClassificationHead(base_learner='SVM-CS-W')
+
+    def forward(self, emb_support, labels_support, train_way, train_shot,
+                prune_ratio=0.0):
+        n_episode, n_support, d = emb_support.size()
+        # Train the SVM head
+        logit_support, w = self.cls_head(
+            emb_support, emb_support,labels_support, train_way, train_shot)
+
+        assert len(w.shape) == 2
+        # # Compute the gradient of `wnorm` w.r.t. `emb_support`
+        # wgrad = computeGradientPenalty(wnorm, emb_support)
+        # # wgrad -> (tasks_per_batch, n_support, d)
+        # wgrad_abs = wgrad.abs()
+        # # Normalize gradient
+        # with torch.no_grad():
+        #     # Prune the gradient according to the magnitude
+        #     if prune_ratio > 0:
+        #         assert prune_ratio < 1.0
+        #         num_pruned = int(d * prune_ratio)
+        #         threshold = torch.kthvalue(
+        #             wgrad_abs, k=num_pruned, dim=-1, keepdim=True)[0].detach()
+        #         wgrad_abs[wgrad_abs <= threshold] = 0.0
+        #     wgrad_abs_sum = torch.sum(wgrad_abs, dim=(1,2), keepdim=True)
+        # G = wgrad_abs / wgrad_abs_sum * d
+        # # print(labels_support)
+        # # print(G)
+        # # np.save('./emb_support.npy', emb_support.detach().cpu().numpy())
+        # # np.save('./G_train-film-dualBN.npy', G.detach().cpu().numpy())
+        # # np.save('./G_labels.npy', labels_support.detach().cpu().numpy())
+
+        # # Compute task features
+        # emb_task = (emb_support * G).sum(dim=1, keepdim=True)
+        # # emb_task -> (tasks_per_batch, 1, d)
+
+        return w.unsqueeze(1), None
+
 class TaskEmbedding_Entropy_RidgeHead(nn.Module):
     def __init__(self):
         super(TaskEmbedding_Entropy_RidgeHead, self).__init__()
@@ -238,6 +278,8 @@ class TaskEmbedding(nn.Module):
             self.te_func = TaskEmbedding_Cat_SVM_WGrad()
         elif ('FiLM_SVM_WGrad' in metric):
             self.te_func = TaskEmbedding_FiLM_SVM_WGrad()
+        elif ('FiLM_SVM_OnW' in metric):
+            self.te_func = TaskEmbedding_FiLM_SVM_OnW()
         elif ('Entropy_Ridge' in metric):
             self.te_func = TaskEmbedding_Entropy_RidgeHead()
         elif ('Relation' in metric):

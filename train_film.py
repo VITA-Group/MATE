@@ -319,7 +319,10 @@ if __name__ == '__main__':
     elif 'rfs' in opt.network.lower():
         opt.film_indim = 640
     else:
-        opt.film_indim = 2560
+        if 'onw' in opt.task_embedding.lower():
+            opt.film_indim = opt.train_way * 2560
+        else:
+            opt.film_indim = 2560
     (embedding_net, cls_head) = get_model(opt)
     add_te_func = get_task_embedding_func(opt)
     postprocessing_net = get_postprocessing_model(opt)

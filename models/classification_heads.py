@@ -615,15 +615,17 @@ class ClassificationHead(nn.Module):
         super(ClassificationHead, self).__init__()
         self.base_learner = base_learner
 
-        if 'SVM-CS-BiP' in base_learner:
+        if 'SVM-CS-BiP' == base_learner:
             self.head = MetaOptNetHead_SVM_CS_BiP
-        elif 'SVM-CS-WNorm' in base_learner:
+        elif 'SVM-CS-WNorm' == base_learner:
             self.head = MetaOptNetHead_SVM_CS_WNorm
-        elif 'SVM-CS' in base_learner:
+        elif 'SVM-CS-W' == base_learner:
+            self.head = MetaOptNetHead_SVM_CS_W
+        elif 'SVM-CS' == base_learner:
             self.head = MetaOptNetHead_SVM_CS
-        elif 'Ridge' in base_learner:
+        elif 'Ridge' == base_learner:
             self.head = MetaOptNetHead_Ridge
-        elif 'R2D2' in base_learner:
+        elif 'R2D2' == base_learner:
             self.head = R2D2Head
         elif 'Proto' in base_learner:
             self.head = ProtoNetHead
@@ -872,3 +874,131 @@ def MetaOptNetHead_SVM_CS_WNorm(
     wnorm = torch.sum(w, dim=(1,2))  # (tasks_per_batch, n_way)
 
     return logits, wnorm
+
+
+
+def MetaOptNetHead_SVM_CS_W(
+        query, support, support_labels, n_way, n_shot, C_reg=0.1,
+        double_precision=False, maxIter=15):
+    """
+    Fits the support set with multi-class SVM and
+    returns the classification score on the query set.
+
+    This is the multi-class SVM presented in:
+    On the Algorithmic Implementation of Multiclass Kernel-based Vector Machines
+    (Crammer and Singer, Journal of Machine Learning Research 2001).
+
+    This model is the classification head that we use for the final version.
+    Parameters:
+      query:  a (tasks_per_batch, n_query, d) Tensor.
+      support:  a (tasks_per_batch, n_support, d) Tensor.
+      support_labels: a (tasks_per_batch, n_support) Tensor.
+      n_way: a scalar. Represents the number of classes in a few-shot classification task.
+      n_shot: a scalar. Represents the number of support examples given per class.
+      C_reg: a scalar. Represents the cost parameter C in SVM.
+      double_precision: boolean.
+      maxIter: an integer.
+    Returns: a (tasks_per_batch, n_query, n_way) Tensor.
+    """
+
+    tasks_per_batch = query.size(0)
+    n_support = support.size(1)
+    n_query = query.size(1)
+
+    assert(query.dim() == 3)
+    assert(support.dim() == 3)
+    assert(query.size(0) == support.size(0) and
+           query.size(2) == support.size(2))
+    assert(n_support == n_way * n_shot)
+    # n_support must equal to n_way * n_shot
+
+    # Here we solve the dual problem:
+    # Note that the classes are indexed by m & samples are indexed by i.
+    # min_{\alpha}  0.5 \sum_m ||w_m(\alpha)||^2 + \sum_i \sum_m e^m_i alpha^m_i
+    # s.t.  \alpha^m_i <= C^m_i \forall m,i , \sum_m \alpha^m_i=0 \forall i
+
+    # where w_m(\alpha) = \sum_i \alpha^m_i x_i,
+    # and C^m_i = C if m  = y_i,
+    # C^m_i = 0 if m != y_i.
+    # This borrows the notation of liblinear.
+
+    # ipdb.set_trace()
+    # ipdb.set_trace(context=5)
+
+    #\alpha is an (n_support, n_way) matrix
+    kernel_matrix = computeGramMatrix(support, support)
+
+    id_matrix_0 = torch.eye(n_way).expand(tasks_per_batch, n_way, n_way).cuda()
+    block_kernel_matrix = batched_kronecker(kernel_matrix, id_matrix_0)
+    # This seems to help avoid PSD error from the QP solver.
+    block_kernel_matrix += 1.0 * torch.eye(n_way*n_support).expand(
+        tasks_per_batch, n_way*n_support, n_way*n_support).cuda()
+
+    support_labels_one_hot = one_hot(
+        support_labels.view(tasks_per_batch * n_support), n_way)
+    # support_labels_one_hot -> (tasks_per_batch * n_support, n_support)
+    support_labels_one_hot = support_labels_one_hot.view(
+        tasks_per_batch, n_support, n_way)
+    support_labels_one_hot = support_labels_one_hot.reshape(
+        tasks_per_batch, n_support * n_way)
+
+    G = block_kernel_matrix
+    e = -1.0 * support_labels_one_hot
+    # print (G.size())
+    # This part is for the inequality constraints:
+    #   \alpha^m_i <= C^m_i \forall m,i
+    # where C^m_i = C if m  = y_i,
+    #   C^m_i = 0 if m != y_i.
+    id_matrix_1 = torch.eye(n_way * n_support).expand(
+        tasks_per_batch, n_way * n_support, n_way * n_support)
+    C = Variable(id_matrix_1)
+    h = Variable(C_reg * support_labels_one_hot)
+    # print (C.size(), h.size())
+    # This part is for the equality constraints:
+    #   \sum_m \alpha^m_i=0 \forall i
+    id_matrix_2 = torch.eye(n_support).expand(tasks_per_batch, n_support, n_support).cuda()
+
+    A = Variable(batched_kronecker(
+        id_matrix_2, torch.ones(tasks_per_batch, 1, n_way).cuda()))
+    b = Variable(torch.zeros(tasks_per_batch, n_support))
+    # print (A.size(), b.size())
+    if double_precision:
+        G, e, C, h, A, b = [x.double().cuda() for x in [G, e, C, h, A, b]]
+    else:
+        G, e, C, h, A, b = [x.float().cuda() for x in [G, e, C, h, A, b]]
+
+    # e, _ = torch.eig(G[0])
+    # print(e)
+    # for i in range(tasks_per_batch):
+    #     e, _ = torch.eig(G[i])
+    #     if not torch.all(e[:,0] > 0):
+    #         print(e)
+    # Solve the following QP to fit SVM:
+    #        \hat z =   argmin_z 1/2 z^T G z + e^T z
+    #                 subject to Cz <= h
+    # We use detach() to prevent backpropagation to fixed variables.
+    qp_sol = QPFunction(verbose=False, maxIter=maxIter)(
+        G, e.detach(), C.detach(), h.detach(), A.detach(), b.detach())
+
+    # Compute the classification score.
+    compatibility = computeGramMatrix(support, query)
+    compatibility = compatibility.float()
+    compatibility = compatibility.unsqueeze(3).expand(
+        tasks_per_batch, n_support, n_query, n_way)
+    qp_sol = qp_sol.reshape(tasks_per_batch, n_support, n_way)
+    logits = qp_sol.float().unsqueeze(2).expand(
+        tasks_per_batch, n_support, n_query, n_way)
+    logits = logits * compatibility
+    logits = torch.sum(logits, 1)
+
+    # Compute the norm of `w` parameters
+    # ipdb.set_trace()
+    # ipdb.set_trace(context=5)
+    qp_sol_outer_product = computeOuterProduct(qp_sol, dim=1)
+    # qp_sol_outer_product -> (tasks_per_batch, n_support, n_support, n_way)
+    kernel_matrix_expand = kernel_matrix.unsqueeze(3).expand(
+        tasks_per_batch, n_support, n_support, n_way)
+    w = qp_sol_outer_product * kernel_matrix_expand
+    #  wnorm = torch.sum(w, dim=(1,2))  # (tasks_per_batch, n_way)
+
+    return logits, w.reshape(w.shape[0], -1)

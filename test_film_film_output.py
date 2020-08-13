@@ -289,8 +289,8 @@ if __name__ == '__main__':
                 if i == 1:
                     w1 = m.MLP[0].weight.detach().cpu().numpy()
                     b1 = m.MLP[0].bias.detach().cpu().numpy()
-                    w2 = m.MLP[1].weight.detach().cpu().numpy()
-                    b2 = m.MLP[1].bias.detach().cpu().numpy()
+                    w2 = m.MLP[2].weight.detach().cpu().numpy()
+                    b2 = m.MLP[2].bias.detach().cpu().numpy()
                     np.savez(os.path.join(opt.save_dir,
                                           'film_layer_{}.npz'.format(id_m+1)),
                              w1=w1, b1=b1, w2=w2, b2=b2)

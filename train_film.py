@@ -382,11 +382,11 @@ if __name__ == '__main__':
             if 'head' in saved_models.keys():
                 cls_head.load_state_dict(saved_models['head'])
             if 'task_embedding' in saved_models.keys():
-                add_te_func.load_state_dict(saved_models['task_embedding'])
+                add_te_func.load_state_dict(saved_models['task_embedding'], strict=False)
             if 'postprocessing' in saved_models.keys():
                 postprocessing_net.load_state_dict(saved_models['postprocessing'])
-            if 'optimizer' in saved_models.keys():
-                optimizer.load_state_dict(saved_models['optimizer'])
+            # if 'optimizer' in saved_models.keys():
+            #     optimizer.load_state_dict(saved_models['optimizer'])
             if 'film_preprocess' in saved_models.keys():
                 film_preprocess.load_state_dict(saved_models['film_preprocess'])
             del saved_models
@@ -408,6 +408,7 @@ if __name__ == '__main__':
         lambda_epoch = lambda e: 1.0 if e < lambda_epochs[0] else (
             0.06 if e < lambda_epochs[1] else (
                 0.012 if e < lambda_epochs[2] else 0.0024))
+    last_epoch = -1
     lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer,
                                                      lr_lambda=lambda_epoch,
                                                      last_epoch=last_epoch)

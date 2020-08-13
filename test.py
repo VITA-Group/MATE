@@ -188,7 +188,12 @@ if __name__ == '__main__':
         try:
             embedding_net.load_state_dict(saved_models['embedding'])
         except RuntimeError:
-            embedding_net.module.load_state(saved_models['embedding'])
+            try:
+                embedding_net.module.load_state(saved_models['embedding'])
+            except AttributeError:
+                device_ids = list(range(len(opt.gpu.split(','))))
+                embedding_net = torch.nn.DataParallel(embedding_net, device_ids=device_ids)
+                embedding_net.load_state_dict(saved_models['embedding'])
         embedding_net.eval()
     else:
         embedding_net.load_state_dict(saved_models['model'])
@@ -197,7 +202,15 @@ if __name__ == '__main__':
         cls_head.load_state_dict(saved_models['head'])
         cls_head.eval()
     if 'task_embedding' in saved_models.keys():
-        add_te_func.load_state_dict(saved_models['task_embedding'])
+        try:
+            add_te_func.load_state_dict(saved_models['task_embedding'])
+        except RuntimeError:
+            try:
+                add_te_func.module.load_state_dict(saved_models['task_embedding'])
+            except AttributeError:
+                device_ids = list(range(len(opt.gpu.split(','))))
+                add_te_func = torch.nn.DataParallel(add_te_func, device_ids=device_ids)
+                add_te_func.load_state_dict(saved_models['task_embedding'])
         add_te_func.eval()
     if 'postprocessing' in saved_models.keys():
         postprocessing_net.load_state_dict(saved_models['postprocessing'])

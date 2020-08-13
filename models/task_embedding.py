@@ -175,7 +175,7 @@ class TaskEmbedding_FiLM_SVM_WGrad(nn.Module):
 class TaskEmbedding_FiLM_SVM_OnW(nn.Module):
     def __init__(self):
         super(TaskEmbedding_FiLM_SVM_OnW, self).__init__()
-        self.cls_head = ClassificationHead(base_learner='SVM-CS-W')
+        self.cls_head = ClassificationHead(base_learner='SVM-CS-OnW')
 
     def forward(self, emb_support, labels_support, train_way, train_shot,
                 prune_ratio=0.0):

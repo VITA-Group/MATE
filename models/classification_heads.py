@@ -619,8 +619,8 @@ class ClassificationHead(nn.Module):
             self.head = MetaOptNetHead_SVM_CS_BiP
         elif 'SVM-CS-WNorm' == base_learner:
             self.head = MetaOptNetHead_SVM_CS_WNorm
-        elif 'SVM-CS-W' == base_learner:
-            self.head = MetaOptNetHead_SVM_CS_W
+        elif 'SVM-CS-OnW' == base_learner:
+            self.head = MetaOptNetHead_SVM_CS_OnW
         elif 'SVM-CS' == base_learner:
             self.head = MetaOptNetHead_SVM_CS
         elif 'Ridge' == base_learner:
@@ -877,7 +877,7 @@ def MetaOptNetHead_SVM_CS_WNorm(
 
 
 
-def MetaOptNetHead_SVM_CS_W(
+def MetaOptNetHead_SVM_CS_OnW(
         query, support, support_labels, n_way, n_shot, C_reg=0.1,
         double_precision=False, maxIter=15):
     """

@@ -77,7 +77,7 @@ def get_model(options):
         if 'imagenet' in opt.dataset.lower():
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=5,
-                film_indim=opt.film_indim, film_alpha=1.0, film_act=film_act,
+                film_indim=options.film_indim, film_alpha=1.0, film_act=film_act,
                 final_relu=(not options.no_final_relu),
                 film_normalize=options.film_normalize,
                 dual_BN=options.dual_BN).cuda()
@@ -85,7 +85,7 @@ def get_model(options):
         else:
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=2,
-                film_indim=2560, film_alpha=1.0, film_act=film_act,
+                film_indim=options.film_indim, film_alpha=1.0, film_act=film_act,
                 final_relu=(not options.no_final_relu),
                 film_normalize=options.film_normalize,
                 dual_BN=options.dual_BN).cuda()
@@ -320,9 +320,10 @@ if __name__ == '__main__':
         opt.film_indim = 640
     else:
         if 'onw' in opt.task_embedding.lower():
-            opt.film_indim = opt.train_way * 2560
+            opt.film_indim = 3125
         else:
             opt.film_indim = 2560
+    print(opt.film_indim)
     (embedding_net, cls_head) = get_model(opt)
     add_te_func = get_task_embedding_func(opt)
     postprocessing_net = get_postprocessing_model(opt)
@@ -483,6 +484,7 @@ if __name__ == '__main__':
                 emb_task, _ = add_te_func(
                     emb_support, labels_support, opt.train_way, opt.train_shot,
                     opt.wgrad_prune_ratio)
+                # print(emb_task.shape)
                 if opt.film_preprocess:
                     emb_task = film_preprocess(emb_task.squeeze(1)).unsqueeze(1)
             else:

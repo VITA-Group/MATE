@@ -644,7 +644,7 @@ class ClassificationHead(nn.Module):
     def forward(self, query, support, support_labels, n_way, n_shot, **kwargs):
         scale = self.scale if self.enable_scale else 1.0
 
-        if 'WNorm' in self.base_learner:
+        if 'WNorm' in self.base_learner or 'OnW' in self.base_learner:
             logits, wnorm = self.head(query, support, support_labels, n_way, n_shot, **kwargs)
             return scale * logits, wnorm
         else:

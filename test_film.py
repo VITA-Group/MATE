@@ -78,7 +78,7 @@ def get_model(options):
         else:
             network = resnet12_film(
                 avg_pool=False, drop_rate=0.1, dropblock_size=2,
-                film_indim=2560, film_alpha=1.0, film_act=film_act,
+                film_indim=options.film_indim, film_alpha=1.0, film_act=film_act,
                 final_relu=(not opt.no_final_relu),
                 film_normalize=opt.film_normalize,
                 dual_BN=options.dual_BN).cuda()
@@ -252,7 +252,10 @@ if __name__ == '__main__':
     elif 'rfs' in opt.network.lower():
         opt.film_indim = 640
     else:
-        opt.film_indim = 2560
+        if 'onw' in opt.task_embedding.lower():
+            opt.film_indim = 3125
+        else:
+            opt.film_indim = 2560
     # Define the models
     (embedding_net, cls_head) = get_model(opt)
     add_te_func = get_task_embedding_func(opt)

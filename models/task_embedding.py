@@ -158,15 +158,9 @@ class TaskEmbedding_FiLM_SVM_WGrad(nn.Module):
                 wgrad_abs[wgrad_abs <= threshold] = 0.0
             wgrad_abs_sum = torch.sum(wgrad_abs, dim=(1,2), keepdim=True)
         G = wgrad_abs / wgrad_abs_sum * d
-        # print(labels_support)
-        # print(G)
-        # np.save('./emb_support.npy', emb_support.detach().cpu().numpy())
-        # np.save('./G_train-film-dualBN.npy', G.detach().cpu().numpy())
-        # np.save('./G_labels.npy', labels_support.detach().cpu().numpy())
 
         # Compute task features
         emb_task = (emb_support * G).sum(dim=1, keepdim=True)
-        # emb_task -> (tasks_per_batch, 1, d)
 
         return emb_task, wgrad
 
@@ -185,31 +179,9 @@ class TaskEmbedding_FiLM_SVM_OnW(nn.Module):
 
         assert len(w.shape) == 2
         # # Compute the gradient of `wnorm` w.r.t. `emb_support`
-        # wgrad = computeGradientPenalty(wnorm, emb_support)
-        # # wgrad -> (tasks_per_batch, n_support, d)
-        # wgrad_abs = wgrad.abs()
-        # # Normalize gradient
-        # with torch.no_grad():
-        #     # Prune the gradient according to the magnitude
-        #     if prune_ratio > 0:
-        #         assert prune_ratio < 1.0
-        #         num_pruned = int(d * prune_ratio)
-        #         threshold = torch.kthvalue(
-        #             wgrad_abs, k=num_pruned, dim=-1, keepdim=True)[0].detach()
-        #         wgrad_abs[wgrad_abs <= threshold] = 0.0
-        #     wgrad_abs_sum = torch.sum(wgrad_abs, dim=(1,2), keepdim=True)
-        # G = wgrad_abs / wgrad_abs_sum * d
-        # # print(labels_support)
-        # # print(G)
-        # # np.save('./emb_support.npy', emb_support.detach().cpu().numpy())
-        # # np.save('./G_train-film-dualBN.npy', G.detach().cpu().numpy())
-        # # np.save('./G_labels.npy', labels_support.detach().cpu().numpy())
-
-        # # Compute task features
-        # emb_task = (emb_support * G).sum(dim=1, keepdim=True)
-        # # emb_task -> (tasks_per_batch, 1, d)
 
         return w.unsqueeze(1), None
+
 
 class TaskEmbedding_Entropy_RidgeHead(nn.Module):
     def __init__(self):
@@ -261,6 +233,10 @@ class TaskEmbedding_Entropy_SVMHead_NoGrad(nn.Module):
 class TaskEmbedding(nn.Module):
     def __init__(self, metric='None', dataset='MiniImageNet'):
         super(TaskEmbedding, self).__init__()
+        # NOTE: Because the authors of this chunk of codes used `in` keyword
+        #       to check the option for `metric`, please make sure that the
+        #       name of former checked name is not a sub-string of the metric 
+        #       names that are checked later.
         if ('KME' == metric):
             self.te_func = TaskEmbedding_KME
         elif ('FiLM_KME' == metric):

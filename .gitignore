@@ -8,9 +8,6 @@
 # Experiment logs
 experiments
 
-# Dataset
-data
-
 # PDF Files
 **/*.pdf
 

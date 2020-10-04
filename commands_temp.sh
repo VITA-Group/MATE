@@ -33,12 +33,68 @@ python test_film.py --gpu 1 --episode 1000 --way 5 --shot 5 --query 15 --dataset
 python test_film.py --gpu 0 --episode 1000 --way 5 --shot 1 --query 15 --dataset CIFAR_FS \
   --head SVM --network ResNet_FiLM \
   --task-embedding FiLM_SVM_WGrad --dual-BN \
-  --load 
+  --load ./experiments/CIFAR_FS_MetaOptNet_SVM_FiLM-SVM-WGrad_dual-BN_load-naive_msgan1e-6_lr0.01/epoch_21.pth
 
 python test_film.py --gpu 0 --episode 1000 --way 5 --shot 1 --query 15 --dataset CIFAR_FS \
   --head SVM --network ResNet_FiLM \
   --task-embedding FiLM_SVM_WGrad --dual-BN --no-final-relu \
   --load 
+
+
+load_path="./experiments/CIFAR_FS_MetaOptNet_SVM_FiLM-SVM-WGrad_dual-BN_load-naive_msgan1e-6_lr0.01/epoch_24.pth"
+load_path="./experiments/CIFAR_FS_MetaOptNet_SVM_FiLM-SVM-WGrad_dual-BN_load-naive_lr0.01/epoch_22.pth"
+python test_film.py --gpu 0 --episode 1000 --way 5 --shot 1 --query 15 --dataset CIFAR_FS \
+--head SVM --network ResNet_FiLM \
+--task-embedding FiLM_SVM_WGrad --dual-BN \
+--load $load_path; python test_film.py --gpu 0 --episode 1000 --way 5 --shot 5 --query 15 --dataset CIFAR_FS \
+--head SVM --network ResNet_FiLM \
+--task-embedding FiLM_SVM_WGrad --dual-BN \
+--load $load_path
+
+
+
+# CAT + KME
+python train.py --gpu 0,1 \
+--save-path ./experiments/CIFAR_FS_MetaOptNet_SVM_KME \
+--save-epoch 10 --train-shot 5 --dataset CIFAR_FS \
+--head SVM --network ResNet --task-embedding KME
+
+load_path="./experiments/CIFAR_FS_MetaOptNet_SVM_KME/epoch_21.pth"
+python test.py --gpu 0 --episode 1000 --way 5 --shot 1 --query 15 --dataset CIFAR_FS \
+--head SVM --network ResNet --task-embedding KME \
+--load $load_path; python test.py --gpu 0 --episode 1000 --way 5 --shot 5 --query 15 --dataset CIFAR_FS \
+--head SVM --network ResNet --task-embedding KME \
+--load $load_path
+
+# CAT + WGrad_SVM
+python train.py --gpu 0,1 \
+--save-path ./experiments/CIFAR_FS_MetaOptNet_SVM_CAT_SVM-WGrad \
+--save-epoch 10 --train-shot 5 --dataset CIFAR_FS \
+--head SVM --network ResNet --task-embedding Cat_SVM_WGrad
+
+load_path="./experiments/CIFAR_FS_MetaOptNet_SVM_CAT_SVM-WGrad/epoch_22.pth"
+python test.py --gpu 0 --episode 1000 --way 5 --shot 1 --query 15 --dataset CIFAR_FS \
+--head SVM --network ResNet --task-embedding Cat_SVM_WGrad \
+--load $load_path; python test.py --gpu 0 --episode 1000 --way 5 --shot 5 --query 15 --dataset CIFAR_FS \
+--head SVM --network ResNet --task-embedding Cat_SVM_WGrad \
+--load $load_path
+
+
+# FiLM + KME
+python train_film.py --gpu 0,1 \
+  --save-path ./experiments/CIFAR_FS_MetaOptNet_SVM_FiLM-KME_dual-BN_run2 \
+  --save-epoch 10 --train-shot 5 --dataset CIFAR_FS --val-episodes-per-batch 4 \
+  --head SVM --network ResNet_FiLM \
+  --task-embedding FiLM_KME --dual-BN
+
+load_path="./experiments/CIFAR_FS_MetaOptNet_SVM_FiLM-KME_dual-BN_run2/epoch_22.pth"
+python test_film.py --gpu 0 --episode 1000 --way 5 --shot 1 --query 15 --dataset CIFAR_FS \
+--head SVM --network ResNet_FiLM \
+--task-embedding FiLM_KME --dual-BN \
+--load $load_path; python test_film.py --gpu 0 --episode 1000 --way 5 --shot 5 --query 15 --dataset CIFAR_FS \
+--head SVM --network ResNet_FiLM \
+--task-embedding FiLM_KME --dual-BN \
+--load $load_path
 
 # LOAD and TRAIN
 python train_film.py --gpu 0,1 \
@@ -55,7 +111,7 @@ python train_film.py --gpu 0,1 \
   --task-embedding FiLM_SVM_WGrad --dual-BN --lr 0.01 \
   --load-naive-backbone --load ./experiments/CIFAR_FS_MetaOptNet_SVM_baseline/epoch_22.pth
 
-python train_film.py --gpu 6,7 \
+python train_film.py --gpu 0,1 \
   --save-path ./experiments/CIFAR_FS_MetaOptNet_SVM_FiLM-SVM-WGrad_dual-BN_load-naive_msgan1e-6_lr0.01 \
   --save-epoch 10 --train-shot 5 --dataset CIFAR_FS --val-episodes-per-batch 4 \
   --head SVM --network ResNet_FiLM \
@@ -187,6 +243,24 @@ python test.py --gpu 0,1,2,3 --load ./experiments/miniImageNet_MetaOptNet_SVM_Re
 python test_film.py --gpu 0 --episode 1000 --way 5 --shot 1 --query 15 --dataset miniImageNet \
   --head SVM --network ResNet_FiLM \
   --task-embedding FiLM_SVM_WGrad --dual-BN \
+  --load ./experiments/miniImageNet_MetaOptNet_SVM_ResNet12-FiLM-SVM-WGrad_dual-BN_msgan1e-8_fixpre/epoch_23.pth;
+python test_film.py --gpu 0 --episode 1000 --way 5 --shot 5 --query 15 --dataset miniImageNet \
+  --head SVM --network ResNet_FiLM \
+  --task-embedding FiLM_SVM_WGrad --dual-BN \
+  --load ./experiments/miniImageNet_MetaOptNet_SVM_ResNet12-FiLM-SVM-WGrad_dual-BN_msgan1e-8_fixpre/epoch_23.pth;
+
+python test_film.py --gpu 0 --episode 1000 --way 5 --shot 1 --query 15 --dataset miniImageNet \
+  --head SVM --network ResNet_FiLM \
+  --task-embedding FiLM_SVM_WGrad --dual-BN \
+  --load ./experiments/miniImageNet_MetaOptNet_SVM_ResNet12-FiLM-SVM-WGrad_dual-BN_msgan1e-6_fixpre/epoch_22.pth;
+python test_film.py --gpu 0 --episode 1000 --way 5 --shot 5 --query 15 --dataset miniImageNet \
+  --head SVM --network ResNet_FiLM \
+  --task-embedding FiLM_SVM_WGrad --dual-BN \
+  --load ./experiments/miniImageNet_MetaOptNet_SVM_ResNet12-FiLM-SVM-WGrad_dual-BN_msgan1e-6_fixpre/epoch_22.pth;
+
+python test_film.py --gpu 0 --episode 1000 --way 5 --shot 1 --query 15 --dataset miniImageNet \
+  --head SVM --network ResNet_FiLM \
+  --task-embedding FiLM_SVM_WGrad --dual-BN \
   --load ./experiments/miniImageNet_MetaOptNet_SVM_ResNet12-FiLM-SVM-WGrad_dual-BN/epoch_21.pth;
 python test_film.py --gpu 0 --episode 1000 --way 5 --shot 5 --query 15 --dataset miniImageNet \
   --head SVM --network ResNet_FiLM \
@@ -246,6 +320,15 @@ python train_film.py --gpu 0,1,2,3 \
   --head SVM --network ResNet_FiLM \
   --task-embedding FiLM_SVM_WGrad --dual-BN --fix-preprocess
 
+# ResNet12 MATE - old + fixpre + msgan
+python train_film.py --gpu 0,1,2,3 \
+  --save-path ./experiments/miniImageNet_MetaOptNet_SVM_ResNet12-FiLM-SVM-WGrad_dual-BN_msgan1e-8_fixpre \
+  --save-epoch 10 --train-shot 15 --dataset miniImageNet --eps 0.1 \
+  --episodes-per-batch 8 --val-episodes-per-batch 1 \
+  --head SVM --network ResNet_FiLM \
+  --film-reg-type MSGAN --film-reg-level 1e-8 \
+  --task-embedding FiLM_SVM_WGrad --dual-BN --fix-preprocess
+
 # ResNet12 MATE - old
 python train_film.py --gpu 0,1,2,3 \
   --save-path ./experiments/miniImageNet_MetaOptNet_SVM_ResNet12-FiLM-SVM-WGrad_dual-BN \
@@ -256,12 +339,12 @@ python train_film.py --gpu 0,1,2,3 \
 
 # ResNet12 load-train
 python train_film.py --gpu 0,1,2,3 \
-  --save-path ./experiments/miniImageNet_MetaOptNet_SVM_ResNet12-FiLM-SVM-WGrad_dual-BN_load-naive_lr0.01 \
-  --save-epoch 10 --train-shot 15 --dataset miniImageNet --eps 0.1 \
-  --episodes-per-batch 8 --val-episodes-per-batch 1 \
-  --head SVM --network ResNet_FiLM \
-  --task-embedding FiLM_SVM_WGrad --dual-BN --lr 0.01 \
-  --load-naive-backbone --load ./experiments/miniImageNet_MetaOptNet_SVM_ResNet12_baseline/epoch_21.pth
+--save-path ./experiments/miniImageNet_MetaOptNet_SVM_ResNet12-FiLM-SVM-WGrad_dual-BN_load-naive_lr0.01 \
+--save-epoch 10 --train-shot 15 --dataset miniImageNet --eps 0.1 \
+--episodes-per-batch 8 --val-episodes-per-batch 1 \
+--head SVM --network ResNet_FiLM \
+--task-embedding FiLM_SVM_WGrad --dual-BN --lr 0.01 \
+--load-naive-backbone --load ./experiments/miniImageNet_MetaOptNet_SVM_ResNet12_baseline/epoch_21.pth
 
 python train_film.py --gpu 0,1,2,3 \
   --save-path ./experiments/miniImageNet_MetaOptNet_SVM_ResNet12-FiLM-SVM-WGrad_dual-BN_load-naive_lr0.01_lambda10 \

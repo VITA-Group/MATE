@@ -4,7 +4,7 @@ This repository contains the code for the paper:
 
 MATE: Plugging in Model Awareness to Task Embedding for Meta Learning
 
-[Xiaohan Chen](http://xiaohanchen.com), Zhangyang Wang,
+[Xiaohan Chen](http://xiaohanchen.com), [Zhangyang Wang](https://www.atlaswang.com/),
 [Siyu Tang](https://ps.is.mpg.de/person/stang), [Krikamol Muandet](http://www.krikamol.org/)
 
 This paper is accepted in NeurIPS 2020. The link to the proceedings will be available soon.

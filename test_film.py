@@ -34,6 +34,7 @@ def normalize(x):
     out = x.div(norm)
     return out
 
+
 def get_model(options):
     # Choose the embedding network
     if options.network == 'ProtoNet':
@@ -45,9 +46,6 @@ def get_model(options):
             network = resnet12(avg_pool=False,
                                drop_rate=0.1,
                                dropblock_size=5).cuda()
-            # device_ids = list(range(len(options.gpu.split(','))))
-            # network = torch.nn.DataParallel(network, device_ids=device_ids)
-            # network = torch.nn.DataParallel(network, device_ids=[0, 1, 2, 3])
         else:
             network = resnet12(avg_pool=False,
                                drop_rate=0.1,
@@ -263,7 +261,6 @@ if __name__ == '__main__':
     opt.film_preprocess = 'imagenet' in opt.dataset.lower() and \
                           'film' in opt.task_embedding.lower() and 'rfs' not in opt.network.lower()
     if opt.film_preprocess:
-        # film_preprocess = nn.Linear(16000, 2560, False).cuda()
         film_preprocess = nn.Linear(opt.film_preprocess_input_dim,
                                     opt.film_indim, False).cuda()
         device_ids = list(range(len(opt.gpu.split(','))))
@@ -283,10 +280,9 @@ if __name__ == '__main__':
         load_from_naive_backbone(embedding_net, src_net)
         opt.network = tgt_network
         del src_net
-        # src_net = None
     else:
         embedding_net.load_state_dict(saved_models['embedding'])
-    # embedding_net.load_state_dict(saved_models['embedding'])
+
     embedding_net.eval()
     cls_head.load_state_dict(saved_models['head'])
     cls_head.eval()
@@ -298,16 +294,6 @@ if __name__ == '__main__':
         postprocessing_net.eval()
     if 'film_preprocess' in saved_models.keys():
         film_preprocess.load_state_dict(saved_models['film_preprocess'])
-
-    # for m in embedding_net.modules():
-    #     # print(type(m))
-    #     if isinstance(m, ResNet_FiLM):
-    #         for mm in m.children():
-    #             print(type(mm))
-    # for param in embedding_net.parameters():
-    #     if len(param.size()) == 2 and param.size(-1) == 2560:
-    #         print(param.size())
-    # exit()
 
     # Evaluate on test set
     test_accuracies = []
@@ -325,11 +311,6 @@ if __name__ == '__main__':
         )
         emb_support = emb_support.reshape(1, n_support, -1)
 
-        # np.save('./emb_support_before_film_load_naive.npy', emb_support.detach().cpu().numpy())
-
-        # emb_query = embedding_net(data_query.reshape([-1] + list(data_query.shape[-3:])))
-        # emb_query = emb_query.reshape(1, n_query, -1)
-
         if i > 1:
             last_emb_task = emb_task
         assert('FiLM' in opt.task_embedding)
@@ -337,16 +318,9 @@ if __name__ == '__main__':
             emb_support, labels_support, opt.way, opt.shot, opt.wgrad_prune_ratio)
         if opt.film_preprocess:
             emb_task = film_preprocess(emb_task.squeeze(1)).unsqueeze(1)
-        # print(emb_task[0,0,:30])
-        # print(emb_task * 10**5)
-        # if i > 1:
-        #     print(F.cosine_similarity(
-        #         last_emb_task.squeeze(1),
-        #         emb_task.squeeze(1)))
 
         # Forward pass for support samples with task embeddings
         if emb_task is not None:
-            # emb_task_support_batch = emb_task.expand(1, n_support, -1)
             emb_support = embedding_net(
                 data_support.reshape([-1] + list(data_support.shape[-3:])),
                 task_embedding = emb_task,
@@ -358,17 +332,10 @@ if __name__ == '__main__':
                 task_embedding = None,
                 n_expand = None
             )
-        # emb_support = postprocessing_net(emb_support.reshape([-1] + list(emb_support.size()[2:])))
         emb_support = emb_support.reshape(1, n_support, -1)
-
-        # np.save('./emb_support_after_film.npy', emb_support.detach().cpu().numpy())
-        # np.save('./emb_support_after_film_load_naive.npy', emb_support.detach().cpu().numpy())
-        # print('hahaha')
-        # exit()
 
         # Forward pass for query samples with task embeddings
         if emb_task is not None:
-            # emb_task_query_batch = emb_task.expand(-1, n_query, -1)
             emb_query = embedding_net(
                 data_query.reshape([-1] + list(data_query.shape[-3:])),
                 task_embedding = emb_task,
@@ -380,11 +347,7 @@ if __name__ == '__main__':
                 task_embedding = None,
                 n_expand = None
             )
-        # emb_query = postprocessing_net(emb_query.reshape([-1] + list(emb_query.size()[2:])))
         emb_query = emb_query.reshape(1, n_query, -1)
-
-        # emb_support = postprocessing_net(emb_support)
-        # emb_query = postprocessing_net(emb_query)
 
         if opt.head == 'SVM':
             logits = cls_head(emb_query, emb_support, labels_support, opt.way, opt.shot, maxIter=3)
@@ -407,9 +370,6 @@ if __name__ == '__main__':
             acc = count_accuracy(logits.reshape(-1, opt.way), labels_query.reshape(-1)).item()
 
         test_accuracies.append(acc)
-
-        # acc = count_accuracy(logits.reshape(-1, opt.way), labels_query.reshape(-1))
-        # test_accuracies.append(acc.item())
 
         avg = np.mean(np.array(test_accuracies))
         std = np.std(np.array(test_accuracies))

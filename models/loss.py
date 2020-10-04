@@ -8,12 +8,8 @@ from .FiLM import FiLM_Layer
 def get_film_loss(model, task_emb, loss_type):
     if 'none' in loss_type.lower():
         return 0.0
-    elif 'ortho' in loss_type.lower():
-        return get_film_srip_loss(model, task_emb)
     elif 'msgan' in loss_type.lower():
         return get_film_msgan_loss(model, task_emb)
-    elif 'dsgan' in loss_type.lower():
-        return get_film_dsgan_loss(model, task_emb)
     else:
         raise ValueError('Invalid `loss_type` for FiLM regularization')
 
@@ -41,11 +37,10 @@ def get_film_msgan_loss(model, task_emb, detach=True):
     tasks_per_batch = task_emb.size(0) # (tasks_per_batch, 1, d)
     task_emb_expanded = task_emb.expand(-1, tasks_per_batch, -1)
     film_loss = 0.0
+
     for m in model.modules():
         if isinstance(m, FiLM_Layer):
             film_out = m.get_mlp_output(task_emb)
-            # print((film_out**2).sum(1).mean())
-            # print(film_out.size(), film_out.abs().sum(2).mean())
             film_out_expanded = film_out.expand(-1, tasks_per_batch, -1)
 
             d_input  = torch.dist(task_emb_expanded,

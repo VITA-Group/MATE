@@ -69,8 +69,6 @@ class BasicBlockFiLM(nn.Module):
         self.final_relu = final_relu
 
     def forward(self, x, task_embedding, n_expand):
-        # if task_embedding is not None:
-        #     print('BasicBlock forward', task_embedding.get_device(), task_embedding.size())
         self.num_batches_tracked += 1
 
         residual = x
@@ -89,12 +87,9 @@ class BasicBlockFiLM(nn.Module):
         out = self.bn3(out, task_embedding) if self.dual_BN else self.bn3(out)
         out = self.film3(out, task_embedding, n_expand)
 
-        # if self.downsample is not None:
-        #     residual = self.downsample(x)
         if self.downsample:
             residual = self.conv_ds(x)
-            residual = self.bn_ds(residual, task_embedding) if self.dual_BN \
-                else self.bn_ds(residual)
+            residual = self.bn_ds(residual, task_embedding) if self.dual_BN else self.bn_ds(residual)
             residual = self.film_ds(residual, task_embedding, n_expand)
 
         out += residual
@@ -165,30 +160,15 @@ class ResNet_FiLM(nn.Module):
                     film_indim=1, film_alpha=1, film_act=F.leaky_relu,
                     film_normalize=True, dual_BN=True):
         downsample = stride != 1 or self.inplanes != planes * block.expansion
-        # downsample = None
-        # if stride != 1 or self.inplanes != planes * block.expansion:
-        #     downsample = nn.Sequential(
-        #         nn.Conv2d(self.inplanes, planes * block.expansion,
-        #                   kernel_size=1, stride=1, bias=False),
-        #         nn.BatchNorm2d(planes * block.expansion),
-        #     )
-
-        # layers = []
-        # layers.append(block(self.inplanes, planes, stride, downsample,
-        #                     drop_rate, drop_block, block_size,
-        #                     film_indim, film_alpha, film_act))
         layers = block(self.inplanes, planes, stride, downsample,
                        drop_rate, drop_block, block_size, final_relu,
                        film_indim, film_alpha, film_act, film_normalize,
                        dual_BN)
         self.inplanes = planes * block.expansion
 
-        # return nn.Sequential(*layers)
         return layers
 
     def forward(self, x, task_embedding, n_expand):
-        # if task_embedding is not None:
-        #     print('embedding net forward', task_embedding.get_device(), task_embedding.size())
         x = self.layer1(x, task_embedding, n_expand)
         x = self.layer2(x, task_embedding, n_expand)
         x = self.layer3(x, task_embedding, n_expand)

@@ -4,22 +4,24 @@ import math
 class ConvBlock(nn.Module):
     def __init__(self, in_channels, out_channels, retain_activation=True):
         super(ConvBlock, self).__init__()
-        
+
         self.block = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
             nn.BatchNorm2d(out_channels)
         )
-        
+
         if retain_activation:
             self.block.add_module("ReLU", nn.ReLU(inplace=True))
         self.block.add_module("MaxPool2d", nn.MaxPool2d(kernel_size=2, stride=2, padding=0))
-        
+
     def forward(self, x):
         out = self.block(x)
         return out
 
-# Embedding network used in Matching Networks (Vinyals et al., NIPS 2016), Meta-LSTM (Ravi & Larochelle, ICLR 2017),
-# MAML (w/ h_dim=z_dim=32) (Finn et al., ICML 2017), Prototypical Networks (Snell et al. NIPS 2017).
+# Embedding network used in Matching Networks (Vinyals et al., NIPS 2016),
+#   Meta-LSTM (Ravi & Larochelle, ICLR 2017),
+#   MAML (w/ h_dim=z_dim=32) (Finn et al., ICML 2017),
+#   Prototypical Networks (Snell et al. NIPS 2017).
 
 class ProtoNetEmbedding(nn.Module):
     def __init__(self, x_dim=3, h_dim=64, z_dim=64, retain_last_activation=True):

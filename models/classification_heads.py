@@ -1,6 +1,5 @@
 import os
 import sys
-import ipdb
 
 import torch
 from torch.autograd import Variable
@@ -132,8 +131,6 @@ def one_hot(indices, depth):
 def batched_kronecker(matrix1, matrix2):
     matrix1_flatten = matrix1.reshape(matrix1.size()[0], -1)
     matrix2_flatten = matrix2.reshape(matrix2.size()[0], -1)
-    # print('matrix1 shape', matrix1.shape)
-    # print('matrix2 shape', matrix2.shape)
     return torch.bmm(matrix1_flatten.unsqueeze(2),
                      matrix2_flatten.unsqueeze(1)).reshape(
         [matrix1.size()[0]] + list(matrix1.size()[1:]) + list(matrix2.size()[1:])
@@ -437,9 +434,6 @@ def MetaOptNetHead_SVM_CS(query, support, support_labels, n_way, n_shot, C_reg=0
     kernel_matrix = computeGramMatrix(support, support)
 
     id_matrix_0 = torch.eye(n_way).expand(tasks_per_batch, n_way, n_way).cuda()
-    # print("")
-    # print("kernel_matrix", kernel_matrix.shape)
-    # print("id_matrix_0", id_matrix_0.shape)
     block_kernel_matrix = batched_kronecker(kernel_matrix, id_matrix_0)
     # This seems to help avoid PSD error from the QP solver.
     block_kernel_matrix += 1.0 * torch.eye(n_way*n_support).expand(tasks_per_batch, n_way*n_support, n_way*n_support).cuda()
@@ -450,7 +444,6 @@ def MetaOptNetHead_SVM_CS(query, support, support_labels, n_way, n_shot, C_reg=0
 
     G = block_kernel_matrix
     e = -1.0 * support_labels_one_hot
-    # print (G.size())
     # This part is for the inequality constraints:
     #   \alpha^m_i <= C^m_i \forall m,i
     # where C^m_i = C if m  = y_i,
@@ -458,7 +451,6 @@ def MetaOptNetHead_SVM_CS(query, support, support_labels, n_way, n_shot, C_reg=0
     id_matrix_1 = torch.eye(n_way * n_support).expand(tasks_per_batch, n_way * n_support, n_way * n_support)
     C = Variable(id_matrix_1)
     h = Variable(C_reg * support_labels_one_hot)
-    # print (C.size(), h.size())
     # This part is for the equality constraints:
     #   \sum_m \alpha^m_i=0 \forall i
     id_matrix_2 = torch.eye(n_support).expand(tasks_per_batch, n_support, n_support).cuda()
@@ -470,8 +462,6 @@ def MetaOptNetHead_SVM_CS(query, support, support_labels, n_way, n_shot, C_reg=0
         G, e, C, h, A, b = [x.double().cuda() for x in [G, e, C, h, A, b]]
     else:
         G, e, C, h, A, b = [x.float().cuda() for x in [G, e, C, h, A, b]]
-
-    # print(G[:25,25:50])
 
     # Solve the following QP to fit SVM:
     #        \hat z =   argmin_z 1/2 z^T G z + e^T z
@@ -710,7 +700,6 @@ def MetaOptNetHead_SVM_CS_BiP(query, support, support_labels, n_way, n_shot, C_r
 
     G = block_kernel_matrix
     e = -1.0 * support_labels_one_hot
-    # print (G.size())
     # This part is for the inequality constraints:
     # \alpha^m_i <= C^m_i \forall m,i
     # where C^m_i = C if m  = y_i,
@@ -718,7 +707,6 @@ def MetaOptNetHead_SVM_CS_BiP(query, support, support_labels, n_way, n_shot, C_r
     id_matrix_1 = torch.eye(n_way * n_support).expand(tasks_per_batch, n_way * n_support, n_way * n_support)
     C = Variable(id_matrix_1)
     h = Variable(C_reg * support_labels_one_hot)
-    # print (C.size(), h.size())
     # This part is for the equality constraints:
     # \sum_m \alpha^m_i=0 \forall i
     id_matrix_2 = torch.eye(n_support).expand(tasks_per_batch, n_support, n_support).cuda()
@@ -794,9 +782,6 @@ def MetaOptNetHead_SVM_CS_WNorm(
     # C^m_i = 0 if m != y_i.
     # This borrows the notation of liblinear.
 
-    # ipdb.set_trace()
-    # ipdb.set_trace(context=5)
-
     #\alpha is an (n_support, n_way) matrix
     kernel_matrix = computeGramMatrix(support, support)
 
@@ -816,7 +801,6 @@ def MetaOptNetHead_SVM_CS_WNorm(
 
     G = block_kernel_matrix
     e = -1.0 * support_labels_one_hot
-    # print (G.size())
     # This part is for the inequality constraints:
     #   \alpha^m_i <= C^m_i \forall m,i
     # where C^m_i = C if m  = y_i,
@@ -825,7 +809,6 @@ def MetaOptNetHead_SVM_CS_WNorm(
         tasks_per_batch, n_way * n_support, n_way * n_support)
     C = Variable(id_matrix_1)
     h = Variable(C_reg * support_labels_one_hot)
-    # print (C.size(), h.size())
     # This part is for the equality constraints:
     #   \sum_m \alpha^m_i=0 \forall i
     id_matrix_2 = torch.eye(n_support).expand(tasks_per_batch, n_support, n_support).cuda()
@@ -833,14 +816,11 @@ def MetaOptNetHead_SVM_CS_WNorm(
     A = Variable(batched_kronecker(
         id_matrix_2, torch.ones(tasks_per_batch, 1, n_way).cuda()))
     b = Variable(torch.zeros(tasks_per_batch, n_support))
-    # print (A.size(), b.size())
     if double_precision:
         G, e, C, h, A, b = [x.double().cuda() for x in [G, e, C, h, A, b]]
     else:
         G, e, C, h, A, b = [x.float().cuda() for x in [G, e, C, h, A, b]]
 
-    # e, _ = torch.eig(G[0])
-    # print(e)
     # for i in range(tasks_per_batch):
     #     e, _ = torch.eig(G[i])
     #     if not torch.all(e[:,0] > 0):
@@ -864,8 +844,6 @@ def MetaOptNetHead_SVM_CS_WNorm(
     logits = torch.sum(logits, 1)
 
     # Compute the norm of `w` parameters
-    # ipdb.set_trace()
-    # ipdb.set_trace(context=5)
     qp_sol_outer_product = computeOuterProduct(qp_sol, dim=1)
     # qp_sol_outer_product -> (tasks_per_batch, n_support, n_support, n_way)
     kernel_matrix_expand = kernel_matrix.unsqueeze(3).expand(
@@ -922,9 +900,6 @@ def MetaOptNetHead_SVM_CS_OnW(
     # C^m_i = 0 if m != y_i.
     # This borrows the notation of liblinear.
 
-    # ipdb.set_trace()
-    # ipdb.set_trace(context=5)
-
     #\alpha is an (n_support, n_way) matrix
     kernel_matrix = computeGramMatrix(support, support)
 
@@ -944,7 +919,6 @@ def MetaOptNetHead_SVM_CS_OnW(
 
     G = block_kernel_matrix
     e = -1.0 * support_labels_one_hot
-    # print (G.size())
     # This part is for the inequality constraints:
     #   \alpha^m_i <= C^m_i \forall m,i
     # where C^m_i = C if m  = y_i,
@@ -953,7 +927,6 @@ def MetaOptNetHead_SVM_CS_OnW(
         tasks_per_batch, n_way * n_support, n_way * n_support)
     C = Variable(id_matrix_1)
     h = Variable(C_reg * support_labels_one_hot)
-    # print (C.size(), h.size())
     # This part is for the equality constraints:
     #   \sum_m \alpha^m_i=0 \forall i
     id_matrix_2 = torch.eye(n_support).expand(tasks_per_batch, n_support, n_support).cuda()
@@ -961,18 +934,11 @@ def MetaOptNetHead_SVM_CS_OnW(
     A = Variable(batched_kronecker(
         id_matrix_2, torch.ones(tasks_per_batch, 1, n_way).cuda()))
     b = Variable(torch.zeros(tasks_per_batch, n_support))
-    # print (A.size(), b.size())
     if double_precision:
         G, e, C, h, A, b = [x.double().cuda() for x in [G, e, C, h, A, b]]
     else:
         G, e, C, h, A, b = [x.float().cuda() for x in [G, e, C, h, A, b]]
 
-    # e, _ = torch.eig(G[0])
-    # print(e)
-    # for i in range(tasks_per_batch):
-    #     e, _ = torch.eig(G[i])
-    #     if not torch.all(e[:,0] > 0):
-    #         print(e)
     # Solve the following QP to fit SVM:
     #        \hat z =   argmin_z 1/2 z^T G z + e^T z
     #                 subject to Cz <= h
@@ -992,8 +958,6 @@ def MetaOptNetHead_SVM_CS_OnW(
     logits = torch.sum(logits, 1)
 
     # Compute the norm of `w` parameters
-    # ipdb.set_trace()
-    # ipdb.set_trace(context=5)
     qp_sol_outer_product = computeOuterProduct(qp_sol, dim=1)
     # qp_sol_outer_product -> (tasks_per_batch, n_support, n_support, n_way)
     kernel_matrix_expand = kernel_matrix.unsqueeze(3).expand(

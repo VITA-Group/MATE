@@ -47,7 +47,6 @@ class PostProcessingNet(nn.Module):
 
 
 class PostProcessingNetConv1d(nn.Module):
-    # def __init__(self, out_dim=None, hidden_dim=None, dataset='MiniImageNet', task_embedding='None'):
     def __init__(self):
         super(PostProcessingNetConv1d, self).__init__()
         self.layer1 = nn.Sequential(

@@ -20,3 +20,6 @@ data
 # IPython Notebooks
 **/.ipynb_checkpoints/*
 **/*.ipynb
+
+# Scripts that records the commands for experiments
+command*.sh
